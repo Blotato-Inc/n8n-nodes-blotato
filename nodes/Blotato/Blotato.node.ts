@@ -8,6 +8,9 @@ import type {
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import { getAccounts, getSubaccounts } from './SearchFunctions';
 
+// Constants
+const THREAD_SUPPORTED_PLATFORMS = ['twitter', 'threads', 'bluesky'];
+
 export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Blotato',
@@ -188,7 +191,7 @@ export class Blotato implements INodeType {
 						displayName: 'From List',
 						name: 'list',
 						type: 'list',
-						placeholder: 'Choose account to post to',
+						placeholder: 'Select an account for the chosen platform',
 						typeOptions: {
 							searchListMethod: 'getAccounts',
 							// TODO: searchable
@@ -258,7 +261,7 @@ export class Blotato implements INodeType {
 
 			// post.content.mediaUrls
 			{
-				displayName: 'Media URLs (Optional)',
+				displayName: 'Media URLs',
 				name: 'postContentMediaUrls',
 				type: 'string',
 				default: '',
@@ -268,7 +271,7 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 					},
 				},
-				description: 'Optional comma-separated list of media URLs',
+				description: 'Comma-separated list of media URLs',
 				placeholder:
 					'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
 			},
@@ -295,7 +298,7 @@ export class Blotato implements INodeType {
 					show: {
 						resource: ['post'],
 						operation: ['create'],
-						platform: ['twitter', 'threads', 'bluesky'],
+						platform: THREAD_SUPPORTED_PLATFORMS,
 					},
 				},
 				description: 'Choose how to create a long-form thread',
@@ -303,7 +306,7 @@ export class Blotato implements INodeType {
 
 			// post.content.additionalPosts (manual method)
 			{
-				displayName: 'Thread',
+				displayName: 'Thread Posts',
 				name: 'postContentAdditionalPosts',
 				placeholder: 'Add Thread',
 				type: 'fixedCollection',
@@ -315,7 +318,7 @@ export class Blotato implements INodeType {
 					show: {
 						resource: ['post'],
 						operation: ['create'],
-						platform: ['twitter', 'threads', 'bluesky'],
+						platform: THREAD_SUPPORTED_PLATFORMS,
 						threadInputMethod: ['manual'],
 					},
 				},
@@ -340,7 +343,7 @@ export class Blotato implements INodeType {
 								name: 'mediaUrls',
 								type: 'string',
 								default: '',
-								description: 'Optional comma-separated list of media URLs',
+								description: 'Comma-separated list of media URLs',
 								placeholder:
 									'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
 							},
@@ -356,15 +359,15 @@ export class Blotato implements INodeType {
 				type: 'string',
 				default: '[]',
 				description: 'Array of posts from previous node. Each item must have "text" (string) and optionally "mediaUrls" (array of strings) properties.',
-				placeholder: '[{"text": "Post 1", "mediaUrls": [""]}, {"text": "Post 2", "mediaUrls": ["url1"]}]',
-				hint: 'In Expression mode use: {{ $json.threadPosts }}',
+				placeholder: '[{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
+				hint: 'Correct format: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
 				validateType: 'array',
 				ignoreValidationDuringExecution: true,
 				displayOptions: {
 					show: {
 						resource: ['post'],
 						operation: ['create'],
-						platform: ['twitter', 'threads', 'bluesky'],
+						platform: THREAD_SUPPORTED_PLATFORMS,
 						threadInputMethod: ['array'],
 					},
 				},
@@ -512,7 +515,7 @@ export class Blotato implements INodeType {
 						displayName: 'From List',
 						name: 'list',
 						type: 'list',
-						placeholder: 'Select a Facebook Page...',
+						placeholder: 'Select a Facebook Page for this account',
 						typeOptions: {
 							searchListMethod: 'getSubaccounts',
 							// searchable: false,
@@ -610,6 +613,8 @@ export class Blotato implements INodeType {
 				options.uri = '/v2/posts';
 
 				const platform = this.getNodeParameter('platform', i) as string;
+				const accountId = (this.getNodeParameter('accountId', i) as { value: string }).value;
+
 				// common options
 				options.body = {
 					post: {
@@ -624,12 +629,12 @@ export class Blotato implements INodeType {
 								.map((url) => url.trim())
 								.filter(Boolean),
 						},
-						accountId: (this.getNodeParameter('accountId', i) as { value: string }).value,
+						accountId: accountId,
 					},
 				};
 
 				// thread handling for platforms that support threads
-				if (['twitter', 'threads', 'bluesky'].includes(platform)) {
+				if (THREAD_SUPPORTED_PLATFORMS.includes(platform)) {
 					const threadInputMethod = this.getNodeParameter('threadInputMethod', i, 'manual') as string;
 
 					if (threadInputMethod === 'manual') {
