@@ -1,6 +1,6 @@
 {
 	"name": "@blotato/n8n-nodes-blotato",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "Official n8n Blotato node",
 	"keywords": [
 		"n8n-community-node-package",
@@ -14,7 +14,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Blotato-Inc/n8n-nodes-blotato.git"
+		"url": "git+https://github.com/Blotato-Inc/n8n-nodes-blotato.git"
 	},
 	"engines": {
 		"node": ">=20.15"
