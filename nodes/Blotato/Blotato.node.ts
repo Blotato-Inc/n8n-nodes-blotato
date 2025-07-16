@@ -7,6 +7,7 @@ import type {
 	IRequestOptions,
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { getAccountsTwitter } from './SearchFunctions';
 
 export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
@@ -137,7 +138,35 @@ export class Blotato implements INodeType {
 			{
 				displayName: 'Account Id',
 				name: 'accountId',
-				type: 'string',
+				type: 'resourceLocator',
+				modes: [
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						placeholder: 'Choose account to post to',
+						typeOptions: {
+							searchListMethod: 'getAccountsTwitter',
+							// TODO: searchable
+							searchable: false,
+						},
+					},
+					{
+						displayName: 'By ID',
+						name: 'id',
+						type: 'string',
+						placeholder: 'e.g. 1234',
+						validation: [
+							{
+								type: 'regex',
+								properties: {
+									regex: '^[1-9]+[0-9]*$',
+									errorMessage: 'Not a valid account ID',
+								},
+							},
+						],
+					},
+				],
 				default: '',
 				required: true,
 				displayOptions: {
@@ -148,6 +177,12 @@ export class Blotato implements INodeType {
 				description: 'Your Blotato social media account id',
 			},
 		],
+	};
+
+	methods = {
+		listSearch: {
+			getAccountsTwitter,
+		},
 	};
 
 	// TODO: add methods like listing your account id
