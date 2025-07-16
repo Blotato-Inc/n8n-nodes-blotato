@@ -144,8 +144,8 @@ export class Blotato implements INodeType {
 					{
 						name: 'Create',
 						value: 'create',
-						description: 'Create new post',
-						action: 'Create new post',
+						description: 'Create post',
+						action: 'Create post',
 					},
 				],
 				default: 'create',
@@ -176,104 +176,6 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 					},
 				},
-			},
-
-			// post.content.text
-			{
-				displayName: 'Post Contents',
-				name: 'postContentText',
-				type: 'string',
-				typeOptions: {
-					rows: 3,
-				},
-				default: '',
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['post'],
-						operation: ['create'],
-					},
-				},
-				description: 'Post contents or description for media upload',
-			},
-
-			// isWebhook
-			// {
-			// 	displayName: 'Webhook',
-			// 	name: 'platform',
-			// 	type: 'boolean',
-			// 	default: false,
-			// 	description: 'Use webhook?',
-			// 	displayOptions: {
-			// 		show: {
-			// 			resource: ['post'],
-			// 			operation: ['create'],
-			// 		},
-			// 	},
-			// },
-
-			// post.content.mediaUrls
-			{
-				displayName: 'Attached Media URLs',
-				name: 'postContentMediaUrls',
-				type: 'string',
-				default: '',
-				displayOptions: {
-					show: {
-						resource: ['post'],
-						operation: ['create'],
-					},
-				},
-				description: 'Comma separate list of media URLs',
-				placeholder:
-					'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
-			},
-
-			// post.content.additionalPosts
-			{
-				displayName: 'Thread-like Additional Posts',
-				name: 'postContentAdditionalPosts',
-				placeholder: 'Add New Post',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
-				},
-				default: {},
-				displayOptions: {
-					show: {
-						resource: ['post'],
-						operation: ['create'],
-						platform: ['twitter', 'threads', 'bluesky'],
-					},
-				},
-				options: [
-					{
-						name: 'posts',
-						displayName: 'Posts',
-						values: [
-							{
-								displayName: 'Text',
-								name: 'text',
-								type: 'string',
-								typeOptions: {
-									rows: 3,
-								},
-								default: '',
-								description: 'The text content of the additional post',
-								required: true,
-							},
-							{
-								displayName: 'Media URLs',
-								name: 'mediaUrls',
-								type: 'string',
-								default: '',
-								description: 'Comma separate list of media URLs',
-								placeholder:
-									'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
-							},
-						],
-					},
-				],
 			},
 
 			// post.accountId
@@ -318,6 +220,154 @@ export class Blotato implements INodeType {
 					},
 				},
 				description: 'Your Blotato social media account ID',
+			},
+
+			// post.content.text
+			{
+				displayName: 'Text',
+				name: 'postContentText',
+				type: 'string',
+				typeOptions: {
+					rows: 3,
+				},
+				default: '',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+					},
+				},
+				description: 'The main text for your post',
+			},
+
+			// isWebhook
+			// {
+			// 	displayName: 'Webhook',
+			// 	name: 'platform',
+			// 	type: 'boolean',
+			// 	default: false,
+			// 	description: 'Use webhook?',
+			// 	displayOptions: {
+			// 		show: {
+			// 			resource: ['post'],
+			// 			operation: ['create'],
+			// 		},
+			// 	},
+			// },
+
+			// post.content.mediaUrls
+			{
+				displayName: 'Media URLs (Optional)',
+				name: 'postContentMediaUrls',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+					},
+				},
+				description: 'Optional comma-separated list of media URLs',
+				placeholder:
+					'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
+			},
+
+			// Thread input method toggle
+			{
+				displayName: 'Thread (Optional)',
+				name: 'threadInputMethod',
+				type: 'options',
+				options: [
+					{
+						name: 'Manual',
+						value: 'manual',
+						description: 'Add each post manually',
+					},
+					{
+						name: 'From Data',
+						value: 'array',
+						description: 'Use array data from previous node',
+					},
+				],
+				default: 'manual',
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['twitter', 'threads', 'bluesky'],
+					},
+				},
+				description: 'Choose how to create a long-form thread',
+			},
+
+			// post.content.additionalPosts (manual method)
+			{
+				displayName: 'Thread',
+				name: 'postContentAdditionalPosts',
+				placeholder: 'Add Thread',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['twitter', 'threads', 'bluesky'],
+						threadInputMethod: ['manual'],
+					},
+				},
+				options: [
+					{
+						name: 'posts',
+						displayName: 'Posts',
+						values: [
+							{
+								displayName: 'Text',
+								name: 'text',
+								type: 'string',
+								typeOptions: {
+									rows: 3,
+								},
+								default: '',
+								description: 'Text content of additional thread',
+								required: true,
+							},
+							{
+								displayName: 'Media URLs (Optional)',
+								name: 'mediaUrls',
+								type: 'string',
+								default: '',
+								description: 'Optional comma-separated list of media URLs',
+								placeholder:
+									'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
+							},
+						],
+					},
+				],
+			},
+
+			// Thread posts array input (array method)
+			{
+				displayName: 'Thread Posts',
+				name: 'threadPostsArray',
+				type: 'string',
+				default: '[]',
+				description: 'Array of posts from previous node. Each item must have "text" (string) and optionally "mediaUrls" (array of strings) properties.',
+				placeholder: '[{"text": "Post 1", "mediaUrls": [""]}, {"text": "Post 2", "mediaUrls": ["url1"]}]',
+				hint: 'In Expression mode use: {{ $json.threadPosts }}',
+				validateType: 'array',
+				ignoreValidationDuringExecution: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['twitter', 'threads', 'bluesky'],
+						threadInputMethod: ['array'],
+					},
+				},
 			},
 
 			// post.target - tiktok
@@ -442,7 +492,6 @@ export class Blotato implements INodeType {
 				name: 'postCreateTiktokOptionAutoAddMusic',
 				type: 'boolean',
 				default: false,
-				required: false,
 				displayOptions: {
 					show: {
 						resource: ['post'],
@@ -579,20 +628,57 @@ export class Blotato implements INodeType {
 					},
 				};
 
-				// multipost
-				if (['twitter'].includes(platform)) {
-					options.body.post.content.additionalPosts =
-						(
-							this.getNodeParameter('postContentAdditionalPosts', i, { posts: [] }) as {
-								posts: { text: string; mediaUrls: string }[];
+				// thread handling for platforms that support threads
+				if (['twitter', 'threads', 'bluesky'].includes(platform)) {
+					const threadInputMethod = this.getNodeParameter('threadInputMethod', i, 'manual') as string;
+
+					if (threadInputMethod === 'manual') {
+						// Manual input method - use fixedCollection
+						const additionalPostsData = this.getNodeParameter('postContentAdditionalPosts', i, { posts: [] }) as {
+							posts: Array<{ text: string; mediaUrls: string }>;
+						};
+
+						if (additionalPostsData.posts && additionalPostsData.posts.length > 0) {
+							options.body.post.content.additionalPosts = additionalPostsData.posts.map((post) => ({
+								text: post.text,
+								mediaUrls: post.mediaUrls
+									? post.mediaUrls
+										.split(',')
+										.map((url) => url.trim())
+										.filter(Boolean)
+									: [],
+							}));
+						}
+					} else if (threadInputMethod === 'array') {
+						// Array input method - use dynamic data
+						let threadPostsArray = this.getNodeParameter('threadPostsArray', i) as any;
+
+						// Handle both string (from Fixed mode) and array (from Expression mode) inputs
+						if (typeof threadPostsArray === 'string' && threadPostsArray.trim() !== '') {
+							try {
+								threadPostsArray = JSON.parse(threadPostsArray);
+							} catch (error) {
+								throw new NodeOperationError(
+									this.getNode(),
+									'Thread Posts must be a valid JSON array. Example: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
+									{ itemIndex: i }
+								);
 							}
-						).posts.map((post) => ({
-							text: post.text,
-							mediaUrls: post.mediaUrls
-								.split(',')
-								.map((url) => url.trim())
-								.filter(Boolean),
-						})) || undefined;
+						}
+
+						if (Array.isArray(threadPostsArray) && threadPostsArray.length > 0) {
+							options.body.post.content.additionalPosts = threadPostsArray.map((post: any) => ({
+								text: post.text || '',
+								mediaUrls: post.mediaUrls
+									? (Array.isArray(post.mediaUrls)
+										? post.mediaUrls
+										: typeof post.mediaUrls === 'string'
+											? post.mediaUrls.split(',').map((url: string) => url.trim()).filter(Boolean)
+											: [])
+									: [],
+							}));
+						}
+					}
 				}
 
 				// platform specific
