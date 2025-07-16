@@ -1,18 +1,18 @@
-# n8n-nodes-_node-name_
+# n8n-nodes-blotato
 
-This is an n8n community node. It lets you use _app/service name_ in your n8n workflows.
+This is an n8n community node. It lets you use Blotato in your n8n workflows.
 
-_App/service name_ is _one or two sentences describing the service this node integrates with_.
+Blotato is an AI-powered content engine that enables content creation, publishing, and scheduling across multiple social media platforms through a unified API.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
 [Installation](#installation)  
 [Operations](#operations)  
-[Credentials](#credentials)  <!-- delete if no auth needed -->  
+[Credentials](#credentials)
 [Compatibility](#compatibility)  
-[Usage](#usage)  <!-- delete if not using this section -->  
+[Usage](#usage) 
 [Resources](#resources)  
-[Version history](#version-history)  <!-- delete if not using this section -->  
+[Support](#support)  
 
 ## Installation
 
@@ -20,30 +20,93 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-_List the operations supported by your node._
+This package includes three nodes for interacting with Blotato:
+
+### Media Upload Node
+Upload media files (e.g. images and videos) for your social media content.
+- **Upload from URL**: Upload media files from a URL (required for Blotato API)
+- **Size limit**: 200MB maximum file size
+- **Rate limit**: 10 requests per minute
+
+### Post Publish Node  
+Post content across multiple social media platforms.
+- **Platforms supported**: Twitter, LinkedIn, Facebook, Instagram, Pinterest, TikTok, Threads, Bluesky, YouTube
+- **Features**:
+  - Multi-platform publishing with a single workflow
+  - Schedule posts for later
+  - Add captions, hashtags, and media
+  - Platform-specific options, such as:
+    - YouTube: Privacy settings, subscriber notifications
+    - Pinterest: Board selection, pin title and link
+    - TikTok: Privacy levels, comment/duet settings
+    - Instagram: Reel/story options
+    - LinkedIn: Company pages
+    - Facebook: Reel option
+  - Rate limit: 30 requests per minute
 
 ## Credentials
 
-_If users need to authenticate with the app/service, provide details here. You should include prerequisites (such as signing up with the service), available authentication methods, and how to set them up._
+To use this node, you need to create credentials in n8n:
+
+1. **Get your Blotato API Key**:
+   - Log in to your [Blotato account](https://my.blotato.com)
+   - Navigate to Settings → API Keys
+   - Click "Generate API Key"
+   - **Important**: API access is only available to paying subscribers.
+
+2. **Configure in n8n**:
+   - Go to **Credentials** → **New** → **Blotato API**
+   - Enter your API key
+
+3. **Connect Social Media Accounts**:
+   - In Blotato, navigate to Settings → Connected Accounts
+   - Click "Login with <platform>" to connect your social media account.
 
 ## Compatibility
 
-_State the minimum n8n version, as well as which versions you test against. You can also include any known version incompatibility issues._
+- **n8n version**: 1.80.0 and above
+- **Node.js version**: 18.10 or higher
 
 ## Usage
 
-_This is an optional section. Use it to help users with any difficult or confusing aspects of the node._
+### Example: Multi-Platform Publishing
 
-_By the time users are looking for community nodes, they probably already know n8n basics. But if you expect new users, you can link to the [Try it out](https://docs.n8n.io/try-it-out/) documentation to help them get started._
+1. **Upload your media** using the Media Upload node
+2. **Publish to multiple platforms** using separate Post Publish nodes or a loop
+
+### Tips
+
+- **Rate Limits**: Blotato has a rate limit of 10 media uploads per minute
+- **Media Requirements**: Each platform has specific [media requirements](https://help.blotato.com/tips-and-tricks/social-platform-requirements)
+- **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601
 
 ## Resources
 
 * [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
-* _Link to app/service documentation._
+* [Blotato API Reference](https://help.blotato.com/api-reference)
+* [Blotato Help Center](https://help.blotato.com)
 
-## Version history
+## About Blotato
 
-_This is another optional section. If your node has multiple versions, include a short description of available versions and what changed, as well as any compatibility impact._
+Blotato is your all-in-one AI content engine to create and distribute social media posts. It solves the problem of producing and distributing high-quality content consistently while growing on multiple platforms, without paying for multiple tools that don't integrate with each other.
+
+### Key Features
+- **Content Remixing**: Transform content between platforms (e.g., Youtube videos to Linkedin posts)
+- **AI Generation**: Create AI images, videos, and voices using the best AI models available
+- **Multi-Platform Publishing**: Schedule and publish to all major social platforms
+
+### Who is Blotato For?
+- Solopreneurs
+- Content creators
+- Small business owners
+- Social media marketers
+- Digital marketing agencies
+
+## Support
+
+For issues and feature requests related to this n8n node, please use the [GitHub issue tracker](https://github.com/Blotato-Inc/n8n-nodes-blotato/issues).
+
+For Blotato-specific questions, visit [Blotato Help Center](https://help.blotato.com/).
 
 ## Development
 

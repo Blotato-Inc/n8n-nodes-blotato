@@ -44,11 +44,11 @@ export class Blotato implements INodeType {
 						value: 'media',
 					},
 					{
-						name: 'Publish',
-						value: 'publish',
+						name: 'Post',
+						value: 'post',
 					},
 				],
-				default: 'publish',
+				default: 'post',
 			},
 
 			// ----------------------------------
@@ -69,9 +69,9 @@ export class Blotato implements INodeType {
 				},
 				options: [
 					{
-						name: 'Upload Media',
+						name: 'Upload',
 						value: 'uploadMediaUrl',
-						description: 'Uploads a media from a URL',
+						description: 'Upload an image or video from a URL',
 						action: 'Upload media to Blotato',
 					},
 				],
@@ -105,18 +105,18 @@ export class Blotato implements INodeType {
 				noDataExpression: true,
 				displayOptions: {
 					show: {
-						resource: ['publish'],
+						resource: ['post'],
 					},
 				},
 				options: [
 					{
-						name: 'Publish to Twitter',
-						value: 'publishTwitter',
-						description: 'Publish a new post to Twitter',
-						action: 'Blotato Publish Twitter',
+						name: 'Post to Twitter',
+						value: 'postTwitter',
+						description: 'Post content to Twitter',
+						action: 'Post to twitter',
 					},
 				],
-				default: 'publishTwitter',
+				default: 'postTwitter',
 			},
 
 			// request.post.body
@@ -128,7 +128,7 @@ export class Blotato implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						resource: ['publish'],
+						resource: ['post'],
 					},
 				},
 				description: 'Post contents or description for media upload',
@@ -136,7 +136,7 @@ export class Blotato implements INodeType {
 
 			// request.post.accountId
 			{
-				displayName: 'Account Id',
+				displayName: 'Account',
 				name: 'accountId',
 				type: 'resourceLocator',
 				modes: [
@@ -171,10 +171,10 @@ export class Blotato implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						resource: ['publish'],
+						resource: ['post'],
 					},
 				},
-				description: 'Your Blotato social media account id',
+				description: 'Your Blotato social media account ID',
 			},
 		],
 	};
@@ -212,7 +212,7 @@ export class Blotato implements INodeType {
 					return { url: this.getNodeParameter('mediaUrl', 0) };
 				},
 			},
-			'publish/publishTwitter': {
+			'post/postTwitter': {
 				path: '/v2/posts',
 				method: 'POST',
 				getBody: () => {
