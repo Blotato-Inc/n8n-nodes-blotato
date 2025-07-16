@@ -73,28 +73,60 @@ export class Blotato implements INodeType {
 					{
 						name: 'Upload',
 						value: 'upload',
-						description: 'Upload an image or video from a URL',
-						action: 'Upload media to Blotato',
+						description: 'Upload image or video',
+						action: 'Upload media',
 					},
 				],
-				default: 'uploadMediaUrl',
+				default: 'upload',
 			},
 
 			// upload media
-			// body.url
+			// Use Binary Data toggle
 			{
-				displayName: 'Media URL',
-				name: 'mediaUrl',
-				type: 'string',
-				default: 'paste a valid url here',
-				validateType: 'url',
+				displayName: 'Use Binary Data',
+				name: 'useBinaryData',
+				type: 'boolean',
+				default: false,
 				displayOptions: {
 					show: {
 						resource: ['media'],
 						operation: ['upload'],
 					},
 				},
-				description: 'URL of the media to upload',
+				description: 'Upload binary data instead of URL',
+			},
+
+			// Media URL field
+			{
+				displayName: 'Media URL',
+				name: 'mediaUrl',
+				type: 'string',
+				default: '',
+				validateType: 'url',
+				displayOptions: {
+					show: {
+						resource: ['media'],
+						operation: ['upload'],
+						useBinaryData: [false],
+					},
+				},
+				description: 'public URL of image or video',
+			},
+
+			// Binary property field
+			{
+				displayName: 'Input Binary Field',
+				name: 'binaryPropertyName',
+				type: 'string',
+				default: 'data',
+				displayOptions: {
+					show: {
+						resource: ['media'],
+						operation: ['upload'],
+						useBinaryData: [true],
+					},
+				},
+				description: 'Name of the binary property which contains the media to upload',
 			},
 
 			// ------------- post --------------
@@ -497,8 +529,25 @@ export class Blotato implements INodeType {
 				options.method = 'POST';
 				options.uri = '/v2/media';
 
-				if (operation === 'uploadMediaUrl') {
-					options.body = { url: this.getNodeParameter('mediaUrl', i) };
+				if (operation === 'upload') {
+					const useBinaryData = this.getNodeParameter('useBinaryData', i) as boolean;
+
+					if (useBinaryData) {
+						// Handle binary data upload
+						const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
+						const binaryData = this.helpers.assertBinaryData(i, binaryPropertyName);
+
+						// Convert binary data to data URI
+						const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
+						const base64 = dataBuffer.toString('base64');
+						const mimeType = binaryData.mimeType || 'application/octet-stream';
+						const dataUri = `data:${mimeType};base64,${base64}`;
+
+						options.body = { url: dataUri };
+					} else {
+						// Handle URL upload
+						options.body = { url: this.getNodeParameter('mediaUrl', i) };
+					}
 				} else {
 					throw new NodeOperationError(
 						this.getNode(),
