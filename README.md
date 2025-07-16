@@ -20,28 +20,31 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-This package includes three nodes for interacting with Blotato:
+This node provides two main operations for interacting with Blotato:
 
-### Media Upload Node
-Upload media files (e.g. images and videos) for your social media content.
-- **Upload from URL**: Upload media files from a URL (required for Blotato API)
+### Media Upload
+Upload media files (e.g. images and videos) for your social media content using the Media resource.
+- **Upload from URL**: Upload media files from a URL
+- **Upload from Binary**: Upload media files from binary data
 - **Size limit**: 200MB maximum file size
 - **Rate limit**: 10 requests per minute
 
-### Post Publish Node  
-Post content across multiple social media platforms.
-- **Platforms supported**: Twitter, LinkedIn, Facebook, Instagram, Pinterest, TikTok, Threads, Bluesky, YouTube
+### Post Publish  
+Post content across multiple social media platforms using the Post resource.
+- **Platforms supported**: Twitter, Linkedin, Facebook, Instagram, Pinterest, Tiktok, Threads, Bluesky, Youtube
 - **Features**:
   - Multi-platform publishing with a single workflow
   - Schedule posts for later
   - Add captions, hashtags, and media
-  - Platform-specific options, such as:
-    - YouTube: Privacy settings, subscriber notifications
-    - Pinterest: Board selection, pin title and link
-    - TikTok: Privacy levels, comment/duet settings
-    - Instagram: Reel/story options
-    - LinkedIn: Company pages
-    - Facebook: Reel option
+  - Platform-specific options, such as, but not limited to:
+    - Youtube: Privacy settings, subscriber notifications, Made for Kids setting
+    - Pinterest: Board selection, pin title, alt text, and link
+    - Tiktok: Privacy levels, comment/duet settings
+    - Instagram: Post, Reel, or Story options
+    - Linkedin: Personal profile or Company page
+    - Facebook: Page selection, Video/Reel options
+    - Threads: Reply control settings
+  - **Note**: Instagram, Tiktok, Pinterest, and Youtube require at least one media file (image or video) to be included in posts.
   - Rate limit: 30 requests per minute
 
 ## Credentials
@@ -71,14 +74,15 @@ To use this node, you need to create credentials in n8n:
 
 ### Example: Multi-Platform Publishing
 
-1. **Upload your media** using the Media Upload node
-2. **Publish to multiple platforms** using separate Post Publish nodes or a loop
+1. **Upload your media** using the Media resource and Upload operation
+2. **Publish to multiple platforms** using the Post resource and Create operation
 
 ### Tips
 
 - **Rate Limits**: Blotato has a rate limit of 10 media uploads per minute
 - **Media Requirements**: Each platform has specific [media requirements](https://help.blotato.com/tips-and-tricks/social-platform-requirements)
 - **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601
+- **Debugging**: To view all your API requests, responses, and error messages, go to your [Blotato API Dashboard](https://my.blotato.com/api-dashboard)
 
 ## Resources
 
@@ -91,9 +95,9 @@ To use this node, you need to create credentials in n8n:
 Blotato is your all-in-one AI content engine to create and distribute social media posts. It solves the problem of producing and distributing high-quality content consistently while growing on multiple platforms, without paying for multiple tools that don't integrate with each other.
 
 ### Key Features
-- **Content Remixing**: Transform content between platforms (e.g., Youtube videos to Linkedin posts)
-- **AI Generation**: Create AI images, videos, and voices using the best AI models available
 - **Multi-Platform Publishing**: Schedule and publish to all major social platforms
+- **AI Generation**: Create AI images, videos, and voices using the best AI models available
+- **Content Remixing**: Transform content between platforms (e.g., Youtube videos to Linkedin posts)
 
 ### Who is Blotato For?
 - Solopreneurs

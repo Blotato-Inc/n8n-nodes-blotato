@@ -15,7 +15,7 @@ export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Blotato',
 		name: 'blotato',
-		icon: 'file:blotato.svg',
+		icon: 'file:blotato.png',
 		group: ['input'],
 		version: [2],
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
@@ -26,8 +26,6 @@ export class Blotato implements INodeType {
 		usableAsTool: true,
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
-		// TODO: use webhooks when the post is done
-		webhooks: [],
 		credentials: [
 			{
 				name: 'blotatoApi',
@@ -163,12 +161,12 @@ export class Blotato implements INodeType {
 					{ name: 'Bluesky', value: 'bluesky' },
 					{ name: 'Facebook', value: 'facebook' },
 					{ name: 'Instagram', value: 'instagram' },
-					{ name: 'LinkedIn', value: 'linkedin' },
+					{ name: 'Linkedin', value: 'linkedin' },
 					{ name: 'Pinterest', value: 'pinterest' },
 					{ name: 'Threads', value: 'threads' },
-					{ name: 'TikTok', value: 'tiktok' },
+					{ name: 'Tiktok', value: 'tiktok' },
 					{ name: 'Twitter', value: 'twitter' },
-					{ name: 'YouTube', value: 'youtube' },
+					{ name: 'Youtube', value: 'youtube' },
 				],
 				default: 'instagram',
 				description: 'Social media platform',
@@ -194,7 +192,6 @@ export class Blotato implements INodeType {
 						placeholder: 'Select an account for the chosen platform',
 						typeOptions: {
 							searchListMethod: 'getAccounts',
-							// TODO: searchable
 							searchable: false,
 						},
 					},
@@ -214,7 +211,7 @@ export class Blotato implements INodeType {
 						],
 					},
 				],
-				default: '',
+				default: { mode: 'list', value: '' },
 				required: true,
 				displayOptions: {
 					show: {
@@ -243,21 +240,6 @@ export class Blotato implements INodeType {
 				},
 				description: 'The main text for your post',
 			},
-
-			// isWebhook
-			// {
-			// 	displayName: 'Webhook',
-			// 	name: 'platform',
-			// 	type: 'boolean',
-			// 	default: false,
-			// 	description: 'Use webhook?',
-			// 	displayOptions: {
-			// 		show: {
-			// 			resource: ['post'],
-			// 			operation: ['create'],
-			// 		},
-			// 	},
-			// },
 
 			// post.content.mediaUrls
 			{
@@ -502,8 +484,9 @@ export class Blotato implements INodeType {
 						platform: ['tiktok'],
 					},
 				},
-				description: 'Whether to automatically add music to the post',
+				description: 'Whether to automatically add music. Only works for Tiktok slideshows.',
 			},
+
 
 			// post.target - facebook
 			{
@@ -518,7 +501,6 @@ export class Blotato implements INodeType {
 						placeholder: 'Select a Facebook Page for this account',
 						typeOptions: {
 							searchListMethod: 'getSubaccounts',
-							// searchable: false,
 						},
 					},
 					{
@@ -537,7 +519,7 @@ export class Blotato implements INodeType {
 						],
 					},
 				],
-				default: '',
+				default: { mode: 'list', value: '' },
 				required: true,
 				displayOptions: {
 					show: {
@@ -548,6 +530,282 @@ export class Blotato implements INodeType {
 				},
 				description: 'The Facebook Page ID to post to',
 			},
+
+			// post.target - pinterest
+			{
+				displayName: 'Pinterest Board',
+				name: 'pinterestBoardId',
+				type: 'resourceLocator',
+				modes: [
+					{
+						displayName: 'By ID',
+						name: 'id',
+						type: 'string',
+						placeholder: 'e.g. 123456789012345',
+						validation: [
+							{
+								type: 'regex',
+								properties: {
+									regex: '^[0-9]+$',
+									errorMessage: 'Not a valid Pinterest Board ID (only numbers)',
+								},
+							},
+						],
+					},
+				],
+				default: { mode: 'id', value: '' },
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['pinterest'],
+					},
+				},
+				description: 'The Pinterest Board ID to pin to. Pinterest requires at least one image in mediaUrls',
+			},
+			{
+				displayName: 'Pin Title (Optional)',
+				name: 'postCreatePinterestOptionTitle',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['pinterest'],
+					},
+				},
+				description: 'Optional title for the Pinterest pin',
+			},
+
+			// post.target - youtube
+			{
+				displayName: 'Video Title',
+				name: 'postCreateYoutubeOptionTitle',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['youtube'],
+					},
+				},
+				description: 'Title of the Youtube video',
+			},
+			{
+				displayName: 'Privacy Status',
+				name: 'postCreateYoutubeOptionPrivacyStatus',
+				type: 'options',
+				default: 'public',
+				options: [
+					{
+						name: 'Public',
+						value: 'public',
+					},
+					{
+						name: 'Private',
+						value: 'private',
+					},
+					{
+						name: 'Unlisted',
+						value: 'unlisted',
+					},
+				],
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['youtube'],
+					},
+				},
+				description: 'Privacy setting for the Youtube video',
+			},
+			{
+				displayName: 'Notify Subscribers',
+				name: 'postCreateYoutubeOptionShouldNotifySubscribers',
+				type: 'boolean',
+				default: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['youtube'],
+					},
+				},
+				description: 'Whether to notify subscribers about this video',
+			},
+
+			// Options collection - placed last so users see required fields first
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Scheduled Time',
+						name: 'scheduledTime',
+						type: 'dateTime',
+						default: '',
+						description: 'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
+					},
+					{
+						displayName: 'Linkedin Page',
+						name: 'linkedinPageId',
+						type: 'resourceLocator',
+						modes: [
+							{
+								displayName: 'From List',
+								name: 'list',
+								type: 'list',
+								placeholder: 'Select a Linkedin Page',
+								typeOptions: {
+									searchListMethod: 'getSubaccounts',
+								},
+							},
+							{
+								displayName: 'By ID',
+								name: 'id',
+								type: 'string',
+								placeholder: 'e.g. 104410867',
+								validation: [
+									{
+										type: 'regex',
+										properties: {
+											regex: '^[0-9]+$',
+											errorMessage: 'Not a valid Linkedin Page ID (only numbers)',
+										},
+									},
+								],
+							},
+						],
+						default: '',
+						displayOptions: {
+							show: {
+								'/platform': ['linkedin'],
+							},
+						},
+						description: 'Post to a Linkedin Company Page instead of your personal profile',
+					},
+					{
+						displayName: 'Media Type',
+						name: 'facebookMediaType',
+						type: 'options',
+						default: 'reel',
+						options: [
+							{
+								name: 'Video',
+								value: 'video',
+							},
+							{
+								name: 'Reel',
+								value: 'reel',
+							},
+						],
+						displayOptions: {
+							show: {
+								'/platform': ['facebook'],
+							},
+						},
+						description: 'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
+					},
+					{
+						displayName: 'Media Type',
+						name: 'instagramMediaType',
+						type: 'options',
+						default: 'reel',
+						options: [
+							{
+								name: 'Reel',
+								value: 'reel',
+							},
+							{
+								name: 'Story',
+								value: 'story',
+							},
+						],
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description: 'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
+					},
+					{
+						displayName: 'Pinterest Alt Text',
+						name: 'pinterestAltText',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								'/platform': ['pinterest'],
+							},
+						},
+						description: 'Alternative text for accessibility',
+					},
+					{
+						displayName: 'Pinterest Link',
+						name: 'pinterestLink',
+						type: 'string',
+						default: '',
+						validateType: 'url',
+						displayOptions: {
+							show: {
+								'/platform': ['pinterest'],
+							},
+						},
+						description: 'URL the pin should link to',
+					},
+					{
+						displayName: 'Reply Control',
+						name: 'threadsReplyControl',
+						type: 'options',
+						default: 'everyone',
+						options: [
+							{
+								name: 'Everyone',
+								value: 'everyone',
+							},
+							{
+								name: 'Accounts You Follow',
+								value: 'accounts_you_follow',
+							},
+							{
+								name: 'Mentioned Only',
+								value: 'mentioned_only',
+							},
+						],
+						displayOptions: {
+							show: {
+								'/platform': ['threads'],
+							},
+						},
+						description: 'Control who can reply to your Threads post',
+					},
+					{
+						displayName: 'Made for Kids',
+						name: 'youtubeMadeForKids',
+						type: 'boolean',
+						default: false,
+						displayOptions: {
+							show: {
+								'/platform': ['youtube'],
+							},
+						},
+						description: 'Whether this video is made for kids',
+					},
+				],
+			},
 		],
 	};
 
@@ -557,14 +815,6 @@ export class Blotato implements INodeType {
 			getSubaccounts,
 		},
 	};
-
-	// TODO: add methods like listing your account id
-	// methods = {
-	// };
-
-	// async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-	// 	// TODO:
-	// }
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const inputItems = this.getInputData();
@@ -633,6 +883,46 @@ export class Blotato implements INodeType {
 					},
 				};
 
+				// Validate media requirements for specific platforms
+				const mediaUrls = options.body.post.content.mediaUrls as string[];
+				const requiresMedia = ['instagram', 'tiktok', 'pinterest', 'youtube'].includes(platform);
+
+				if (requiresMedia && mediaUrls.length === 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`${platform.charAt(0).toUpperCase() + platform.slice(1)} requires you to post an image or video.`,
+						{ itemIndex: i }
+					);
+				}
+
+				// Handle options collection
+				const postOptions = this.getNodeParameter('options', i, {}) as {
+					scheduledTime?: string;
+					linkedinPageId?: string | { value?: string };
+					facebookMediaType?: string;
+					instagramMediaType?: string;
+					pinterestAltText?: string;
+					pinterestLink?: string;
+					threadsReplyControl?: string;
+					youtubeMadeForKids?: boolean;
+				};
+
+				this.logger.debug(`PostOptions: ${JSON.stringify(postOptions)}`);
+
+				if (postOptions.scheduledTime) {
+					// Ensure scheduledTime has timezone - append 'Z' for UTC if no timezone specified
+					let scheduledTime = postOptions.scheduledTime;
+					const hasTimezone = scheduledTime.includes('Z') ||
+						scheduledTime.includes('+') ||
+						scheduledTime.match(/[+-]\d{2}:\d{2}$/);
+
+					if (!hasTimezone) {
+						scheduledTime += 'Z'; // Assume UTC if no timezone specified
+					}
+					// Place scheduledTime at root level, not inside post object
+					options.body.scheduledTime = scheduledTime;
+				}
+
 				// thread handling for platforms that support threads
 				if (THREAD_SUPPORTED_PLATFORMS.includes(platform)) {
 					const threadInputMethod = this.getNodeParameter('threadInputMethod', i, 'manual') as string;
@@ -665,7 +955,7 @@ export class Blotato implements INodeType {
 							} catch (error) {
 								throw new NodeOperationError(
 									this.getNode(),
-									'Thread Posts must be a valid JSON array. Example: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
+									'Thread Posts must be a valid JSON array. Example: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": ["https://database.blotato.io/image.jpg"]}]',
 									{ itemIndex: i }
 								);
 							}
@@ -692,6 +982,10 @@ export class Blotato implements INodeType {
 						options.body.post.target.pageId = (
 							this.getNodeParameter('facebookPageId', i) as { value: string }
 						).value;
+						// Add media type option from options if specified (only for videos)
+						if (postOptions.facebookMediaType) {
+							options.body.post.target.mediaType = postOptions.facebookMediaType;
+						}
 						break;
 					case 'tiktok':
 						options.body.post.target = {
@@ -728,14 +1022,73 @@ export class Blotato implements INodeType {
 							) as boolean | undefined,
 						};
 						break;
-					// TODO: other
-					case 'instagram':
-					case 'linkedin':
-					case 'twitter':
 					case 'bluesky':
+						// Bluesky requires no additional configuration
+						break;
 					case 'threads':
+						// Add reply control option from options if specified
+						if (postOptions.threadsReplyControl) {
+							options.body.post.target.replyControl = postOptions.threadsReplyControl;
+						}
+						break;
+					case 'linkedin':
+						// Add optional LinkedIn page ID from options
+						if (postOptions.linkedinPageId) {
+							const pageIdValue = typeof postOptions.linkedinPageId === 'object'
+								? postOptions.linkedinPageId.value
+								: postOptions.linkedinPageId;
+							if (pageIdValue) {
+								options.body.post.target.pageId = pageIdValue;
+							}
+						}
+						break;
+					case 'instagram':
+						// Add media type option from options (reel or story)
+						if (postOptions.instagramMediaType) {
+							options.body.post.target.mediaType = postOptions.instagramMediaType;
+						}
+						break;
 					case 'pinterest':
+						// Required board ID
+						options.body.post.target.boardId = (
+							this.getNodeParameter('pinterestBoardId', i) as { value: string }
+						).value;
+						// Optional fields
+						const pinTitle = this.getNodeParameter('postCreatePinterestOptionTitle', i, '') as string;
+						if (pinTitle) {
+							options.body.post.target.title = pinTitle;
+						}
+						// Get alt text and link from options
+						if (postOptions.pinterestAltText) {
+							options.body.post.target.altText = postOptions.pinterestAltText;
+						}
+						if (postOptions.pinterestLink) {
+							options.body.post.target.link = postOptions.pinterestLink;
+						}
+						break;
 					case 'youtube':
+						// YouTube requires several fields
+						options.body.post.target.title = this.getNodeParameter(
+							'postCreateYoutubeOptionTitle',
+							i,
+						) as string;
+						options.body.post.target.privacyStatus = this.getNodeParameter(
+							'postCreateYoutubeOptionPrivacyStatus',
+							i,
+						) as string;
+						options.body.post.target.shouldNotifySubscribers = this.getNodeParameter(
+							'postCreateYoutubeOptionShouldNotifySubscribers',
+							i,
+						) as boolean;
+						// Optional field from options
+						if (postOptions.youtubeMadeForKids !== undefined) {
+							options.body.post.target.isMadeForKids = postOptions.youtubeMadeForKids;
+						}
+						break;
+					case 'twitter':
+						// Twitter requires no additional configuration
+						// Only targetType is needed, which is already set above
+						// Thread support is handled via additionalPosts
 						break;
 					default:
 						throw new NodeOperationError(
