@@ -226,7 +226,7 @@ export class Blotato implements INodeType {
 								platform: 'twitter',
 								mediaUrls: [],
 							},
-							accountId: this.getNodeParameter('accountId', 0),
+							accountId: (this.getNodeParameter('accountId', 0) as { value: string }).value,
 						},
 					};
 				},
@@ -244,6 +244,8 @@ export class Blotato implements INodeType {
 		}
 		options.method = op.method;
 		options.body = op.getBody();
+
+		this.logger.debug(`Blotato API Request body:\n${JSON.stringify(options.body, null, 2)}`);
 
 		const credentials = await this.getCredentials('blotatoApi');
 		options.uri = credentials.server + op.path;
