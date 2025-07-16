@@ -10,7 +10,7 @@ export class BlotatoApi implements ICredentialType {
 
 	displayName = 'Blotato API';
 
-	documentationUrl = 'blotato';
+	documentationUrl = 'https://help.blotato.com/api/start#authentication';
 
 	properties: INodeProperties[] = [
 		{

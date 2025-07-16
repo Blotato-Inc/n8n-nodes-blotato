@@ -12,9 +12,7 @@ type AccountSearchItem = {
 	username: string;
 };
 
-export async function getAccounts(
-	this: ILoadOptionsFunctions,
-): Promise<INodeListSearchResult> {
+export async function getAccounts(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
 	const platform = this.getNodeParameter('platform', 0) as string;
 	const options: IRequestOptions = {};
 
@@ -46,27 +44,27 @@ type SubaccountSearchItem = {
 	name: string;
 };
 
-export async function getSubaccounts(
-	this: ILoadOptionsFunctions,
-): Promise<INodeListSearchResult> {
+export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
 	const platform = this.getNodeParameter('platform', 0) as string;
-	
+
 	// Check if account is selected
 	try {
 		const accountIdParam = this.getNodeParameter('accountId', 0) as { value: string } | string;
 		const accountId = typeof accountIdParam === 'object' ? accountIdParam.value : accountIdParam;
-		
+
 		if (!accountId) {
 			return {
 				results: [
 					{
+						// used for displaying a message in the dropdown
+						// eslint-disable-next-line n8n-nodes-base/node-param-display-name-miscased
 						name: 'Please select an account above first',
 						value: '',
 					},
 				],
 			};
 		}
-		
+
 		const options: IRequestOptions = {};
 
 		options.qs = { platform };
@@ -94,6 +92,8 @@ export async function getSubaccounts(
 		return {
 			results: [
 				{
+					// used for displaying a message in the dropdown
+					// eslint-disable-next-line n8n-nodes-base/node-param-display-name-miscased
 					name: 'Please select an account above first',
 					value: '',
 				},

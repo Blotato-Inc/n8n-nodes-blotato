@@ -15,6 +15,8 @@ export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Blotato',
 		name: 'blotato',
+		// we do not supply an official svg icon, and use png for consistency
+		// eslint-disable-next-line n8n-nodes-base/node-class-description-icon-not-svg
 		icon: 'file:blotato.png',
 		group: ['input'],
 		version: [2],
@@ -94,7 +96,7 @@ export class Blotato implements INodeType {
 						operation: ['upload'],
 					},
 				},
-				description: 'Upload binary data instead of URL',
+				description: 'Whether to use binary data instead of URL',
 			},
 
 			// Media URL field
@@ -111,7 +113,7 @@ export class Blotato implements INodeType {
 						useBinaryData: [false],
 					},
 				},
-				description: 'public URL of image or video',
+				description: 'Public URL of image or video',
 			},
 
 			// Binary property field
@@ -340,7 +342,8 @@ export class Blotato implements INodeType {
 				name: 'threadPostsArray',
 				type: 'string',
 				default: '[]',
-				description: 'Array of posts from previous node. Each item must have "text" (string) and optionally "mediaUrls" (array of strings) properties.',
+				description:
+					'Array of posts from previous node. Each item must have "text" (string) and optionally "mediaUrls" (array of strings) properties.',
 				placeholder: '[{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
 				hint: 'Correct format: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": []}]',
 				validateType: 'array',
@@ -487,7 +490,6 @@ export class Blotato implements INodeType {
 				description: 'Whether to automatically add music. Only works for Tiktok slideshows.',
 			},
 
-
 			// post.target - facebook
 			{
 				displayName: 'Facebook Page',
@@ -562,7 +564,8 @@ export class Blotato implements INodeType {
 						platform: ['pinterest'],
 					},
 				},
-				description: 'The Pinterest Board ID to pin to. Pinterest requires at least one image in mediaUrls',
+				description:
+					'The Pinterest Board ID to pin to. Pinterest requires at least one image in mediaUrls.',
 			},
 			{
 				displayName: 'Pin Title (Optional)',
@@ -653,13 +656,6 @@ export class Blotato implements INodeType {
 				},
 				options: [
 					{
-						displayName: 'Scheduled Time',
-						name: 'scheduledTime',
-						type: 'dateTime',
-						default: '',
-						description: 'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
-					},
-					{
 						displayName: 'Linkedin Page',
 						name: 'linkedinPageId',
 						type: 'resourceLocator',
@@ -698,6 +694,18 @@ export class Blotato implements INodeType {
 						description: 'Post to a Linkedin Company Page instead of your personal profile',
 					},
 					{
+						displayName: 'Made for Kids',
+						name: 'youtubeMadeForKids',
+						type: 'boolean',
+						default: false,
+						displayOptions: {
+							show: {
+								'/platform': ['youtube'],
+							},
+						},
+						description: 'Whether this video is made for kids',
+					},
+					{
 						displayName: 'Media Type',
 						name: 'facebookMediaType',
 						type: 'options',
@@ -717,7 +725,8 @@ export class Blotato implements INodeType {
 								'/platform': ['facebook'],
 							},
 						},
-						description: 'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
+						description:
+							'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
 					},
 					{
 						displayName: 'Media Type',
@@ -739,7 +748,8 @@ export class Blotato implements INodeType {
 								'/platform': ['instagram'],
 							},
 						},
-						description: 'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
+						description:
+							'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
 					},
 					{
 						displayName: 'Pinterest Alt Text',
@@ -793,16 +803,12 @@ export class Blotato implements INodeType {
 						description: 'Control who can reply to your Threads post',
 					},
 					{
-						displayName: 'Made for Kids',
-						name: 'youtubeMadeForKids',
-						type: 'boolean',
-						default: false,
-						displayOptions: {
-							show: {
-								'/platform': ['youtube'],
-							},
-						},
-						description: 'Whether this video is made for kids',
+						displayName: 'Scheduled Time',
+						name: 'scheduledTime',
+						type: 'dateTime',
+						default: '',
+						description:
+							'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
 					},
 				],
 			},
@@ -891,7 +897,7 @@ export class Blotato implements INodeType {
 					throw new NodeOperationError(
 						this.getNode(),
 						`${platform.charAt(0).toUpperCase() + platform.slice(1)} requires you to post an image or video.`,
-						{ itemIndex: i }
+						{ itemIndex: i },
 					);
 				}
 
@@ -912,7 +918,8 @@ export class Blotato implements INodeType {
 				if (postOptions.scheduledTime) {
 					// Ensure scheduledTime has timezone - append 'Z' for UTC if no timezone specified
 					let scheduledTime = postOptions.scheduledTime;
-					const hasTimezone = scheduledTime.includes('Z') ||
+					const hasTimezone =
+						scheduledTime.includes('Z') ||
 						scheduledTime.includes('+') ||
 						scheduledTime.match(/[+-]\d{2}:\d{2}$/);
 
@@ -925,11 +932,17 @@ export class Blotato implements INodeType {
 
 				// thread handling for platforms that support threads
 				if (THREAD_SUPPORTED_PLATFORMS.includes(platform)) {
-					const threadInputMethod = this.getNodeParameter('threadInputMethod', i, 'manual') as string;
+					const threadInputMethod = this.getNodeParameter(
+						'threadInputMethod',
+						i,
+						'manual',
+					) as string;
 
 					if (threadInputMethod === 'manual') {
 						// Manual input method - use fixedCollection
-						const additionalPostsData = this.getNodeParameter('postContentAdditionalPosts', i, { posts: [] }) as {
+						const additionalPostsData = this.getNodeParameter('postContentAdditionalPosts', i, {
+							posts: [],
+						}) as {
 							posts: Array<{ text: string; mediaUrls: string }>;
 						};
 
@@ -938,9 +951,9 @@ export class Blotato implements INodeType {
 								text: post.text,
 								mediaUrls: post.mediaUrls
 									? post.mediaUrls
-										.split(',')
-										.map((url) => url.trim())
-										.filter(Boolean)
+											.split(',')
+											.map((url) => url.trim())
+											.filter(Boolean)
 									: [],
 							}));
 						}
@@ -956,7 +969,7 @@ export class Blotato implements INodeType {
 								throw new NodeOperationError(
 									this.getNode(),
 									'Thread Posts must be a valid JSON array. Example: [{"text": "Post 1", "mediaUrls": []}, {"text": "Post 2", "mediaUrls": ["https://database.blotato.io/image.jpg"]}]',
-									{ itemIndex: i }
+									{ itemIndex: i },
 								);
 							}
 						}
@@ -965,11 +978,14 @@ export class Blotato implements INodeType {
 							options.body.post.content.additionalPosts = threadPostsArray.map((post: any) => ({
 								text: post.text || '',
 								mediaUrls: post.mediaUrls
-									? (Array.isArray(post.mediaUrls)
+									? Array.isArray(post.mediaUrls)
 										? post.mediaUrls
 										: typeof post.mediaUrls === 'string'
-											? post.mediaUrls.split(',').map((url: string) => url.trim()).filter(Boolean)
-											: [])
+											? post.mediaUrls
+													.split(',')
+													.map((url: string) => url.trim())
+													.filter(Boolean)
+											: []
 									: [],
 							}));
 						}
@@ -1034,9 +1050,10 @@ export class Blotato implements INodeType {
 					case 'linkedin':
 						// Add optional LinkedIn page ID from options
 						if (postOptions.linkedinPageId) {
-							const pageIdValue = typeof postOptions.linkedinPageId === 'object'
-								? postOptions.linkedinPageId.value
-								: postOptions.linkedinPageId;
+							const pageIdValue =
+								typeof postOptions.linkedinPageId === 'object'
+									? postOptions.linkedinPageId.value
+									: postOptions.linkedinPageId;
 							if (pageIdValue) {
 								options.body.post.target.pageId = pageIdValue;
 							}
@@ -1054,7 +1071,11 @@ export class Blotato implements INodeType {
 							this.getNodeParameter('pinterestBoardId', i) as { value: string }
 						).value;
 						// Optional fields
-						const pinTitle = this.getNodeParameter('postCreatePinterestOptionTitle', i, '') as string;
+						const pinTitle = this.getNodeParameter(
+							'postCreatePinterestOptionTitle',
+							i,
+							'',
+						) as string;
 						if (pinTitle) {
 							options.body.post.target.title = pinTitle;
 						}
