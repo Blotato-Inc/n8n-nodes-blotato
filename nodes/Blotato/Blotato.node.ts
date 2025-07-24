@@ -1131,7 +1131,7 @@ export class Blotato implements INodeType {
 				'blotatoApi',
 				options,
 			);
-			returnData.push({ json: response });
+			returnData.push({ json: response, pairedItem: { item: i } });
 		}
 
 		return [returnData];
