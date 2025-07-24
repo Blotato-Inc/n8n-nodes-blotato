@@ -15,9 +15,7 @@ export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Blotato',
 		name: 'blotato',
-		// we do not supply an official svg icon, and use png for consistency
-		// eslint-disable-next-line n8n-nodes-base/node-class-description-icon-not-svg
-		icon: 'file:blotato.png',
+		icon: 'file:blotato.svg',
 		group: ['input'],
 		version: [2],
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
