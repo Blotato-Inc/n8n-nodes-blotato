@@ -845,6 +845,18 @@ export class Blotato implements INodeType {
 
 						// Convert binary data to data URI
 						const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
+						
+						// 15MB file size limit
+						const maxSizeBytes = 15 * 1024 * 1024; // 15MB
+						if (dataBuffer.length > maxSizeBytes) {
+							const sizeMB = (dataBuffer.length / (1024 * 1024)).toFixed(2);
+							throw new NodeOperationError(
+								this.getNode(),
+								`File size (${sizeMB}MB) exceeds 15MB limit. Large files should be uploaded via URL instead of binary data. You can use Google Drive (up to 60MB), Dropbox, Frame.io, or similar services. S3/GCS buckets are recommended for very large files.`,
+								{ itemIndex: i },
+							);
+						}
+						
 						const base64 = dataBuffer.toString('base64');
 						const mimeType = binaryData.mimeType || 'application/octet-stream';
 						const dataUri = `data:${mimeType};base64,${base64}`;
