@@ -45,6 +45,8 @@ const BINARY_UPLOAD_MAX_SIZE_BYTES = BINARY_UPLOAD_MAX_SIZE_MB * 1024 * 1024;
 const API_ENDPOINTS = {
 	VIDEO_TEMPLATES: '/v2/videos/templates',
 	VIDEO_FROM_TEMPLATES: '/v2/videos/from-templates',
+	VIDEO_GET: '/v2/videos/creations',
+	VIDEO_DELETE: '/v2/videos',
 };
 
 // Blotato URLs for hint messages
@@ -53,6 +55,8 @@ const BLOTATO_URLS = {
 	API_DASHBOARD: 'https://my.blotato.com/api-dashboard',
 	MEDIA_REQUIREMENTS: 'https://help.blotato.com/api/media',
 	AUTOMATION_TEMPLATES: 'https://help.blotato.com/api/templates',
+	BILLING: 'https://my.blotato.com/settings/billing',
+	AI_VIDEO_CREDITS: 'https://help.blotato.com/features/videos/ai-video-credits',
 };
 
 // Helper functions
@@ -83,7 +87,7 @@ export class Blotato implements INodeType {
 		],
 		hints: [
 			{
-				message: `View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				message: `View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a><br><br>Credit costs for AI images/videos: <a href="${BLOTATO_URLS.AI_VIDEO_CREDITS}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.AI_VIDEO_CREDITS}</a>`,
 				type: 'info',
 				displayCondition: '={{$parameter["resource"] === "video" && $parameter["operation"] === "create" && $parameter["templateId"] && $parameter["templateId"].value !== ""}}',
 			},
@@ -146,6 +150,18 @@ export class Blotato implements INodeType {
 						value: 'create',
 						description: 'Create a video from a template',
 						action: 'Create video',
+					},
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a video by ID',
+						action: 'Get video',
+					},
+					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete a video by ID',
+						action: 'Delete video',
 					},
 				],
 				default: 'create',
@@ -225,6 +241,23 @@ export class Blotato implements INodeType {
 					},
 				},
 				description: 'Map the input fields required by the selected template',
+			},
+
+			// Video ID for Get and Delete operations
+			{
+				displayName: 'Video ID',
+				name: 'videoId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['video'],
+						operation: ['get', 'delete'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. 123e4567-e89b-12d3-a456-426614174000',
+				description: 'The ID of the video',
 			},
 
 			// ------------- media --------------
@@ -1167,10 +1200,10 @@ export class Blotato implements INodeType {
 
 			if (resource === 'video') {
 				options.json = true;
-				options.method = 'POST';
-				options.uri = API_ENDPOINTS.VIDEO_FROM_TEMPLATES;
 
 				if (operation === 'create') {
+					options.method = 'POST';
+					options.uri = API_ENDPOINTS.VIDEO_FROM_TEMPLATES;
 					const templateIdParam = this.getNodeParameter('templateId', i) as { value: string } | string;
 					const templateId = extractTemplateId(templateIdParam);
 
@@ -1209,6 +1242,32 @@ export class Blotato implements INodeType {
 						inputs,
 						render: true, // Auto-render the video
 					};
+				} else if (operation === 'get') {
+					const videoId = this.getNodeParameter('videoId', i) as string;
+
+					if (!videoId) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Video ID is required',
+							{ itemIndex: i },
+						);
+					}
+
+					options.method = 'GET';
+					options.uri = `${API_ENDPOINTS.VIDEO_GET}/${videoId}`;
+				} else if (operation === 'delete') {
+					const videoId = this.getNodeParameter('videoId', i) as string;
+					
+					if (!videoId) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Video ID is required',
+							{ itemIndex: i },
+						);
+					}
+					
+					options.method = 'DELETE';
+					options.uri = `${API_ENDPOINTS.VIDEO_DELETE}/${videoId}`;
 				} else {
 					throw new NodeOperationError(
 						this.getNode(),
@@ -1523,7 +1582,41 @@ export class Blotato implements INodeType {
 				'blotatoApi',
 				options,
 			);
-			returnData.push({ json: response, pairedItem: { item: i } });
+
+			// Handle different operations
+			if (resource === 'video' && operation === 'get') {
+				const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+				const status = responseData?.item?.status;
+
+				if (status && ['generating-script', 'script-ready', 'queueing'].includes(status)) {
+					// Add a hint message to the response
+					const hintMessage = `⚠️ Your video/carousel is not yet complete. Wait a little longer, and check you have sufficient credits if you are generating AI images or AI videos: ${BLOTATO_URLS.BILLING}`;
+
+					// Add the hint as a property in the response
+					if (responseData.item) {
+						responseData.item._hint = hintMessage;
+					}
+
+					returnData.push({
+						json: responseData,
+						pairedItem: { item: i }
+					});
+				} else {
+					returnData.push({ json: response, pairedItem: { item: i } });
+				}
+			} else if (resource === 'video' && operation === 'delete') {
+				// DELETE returns 204 No Content, so we create a success message
+				const videoId = this.getNodeParameter('videoId', i) as string;
+				returnData.push({ 
+					json: { 
+						success: true,
+						message: `Video ${videoId} deleted successfully`
+					}, 
+					pairedItem: { item: i } 
+				});
+			} else {
+				returnData.push({ json: response, pairedItem: { item: i } });
+			}
 		}
 
 		return [returnData];
