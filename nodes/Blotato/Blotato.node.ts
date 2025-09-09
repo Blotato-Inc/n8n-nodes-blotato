@@ -1333,10 +1333,22 @@ export class Blotato implements INodeType {
 						content: {
 							platform: platform,
 							text: this.getNodeParameter('postContentText', i),
-							mediaUrls: (this.getNodeParameter('postContentMediaUrls', i) as string)
-								.split(',')
-								.map((url) => url.trim())
-								.filter(Boolean),
+							mediaUrls: (() => {
+								const mediaUrlsParam = this.getNodeParameter('postContentMediaUrls', i);
+								// Handle both string (comma-separated) and array inputs
+								if (Array.isArray(mediaUrlsParam)) {
+									// If already an array (e.g., from GET VIDEO imageUrls), use it directly
+									return mediaUrlsParam.filter(url => url && typeof url === 'string');
+								} else if (typeof mediaUrlsParam === 'string') {
+									// If string, split by comma (existing behavior)
+									return mediaUrlsParam
+										.split(',')
+										.map((url) => url.trim())
+										.filter(Boolean);
+								}
+								// If empty or other type, return empty array
+								return [];
+							})(),
 						},
 						accountId: accountId,
 					},
