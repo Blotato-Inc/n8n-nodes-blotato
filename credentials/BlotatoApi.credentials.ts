@@ -26,7 +26,7 @@ export class BlotatoApi implements ICredentialType {
 			name: 'server',
 			type: 'string',
 			default: 'https://backend.blotato.com',
-			description: 'The server to connect to. Just leave is as a default',
+			description: 'The server to connect to. Just leave it as a default',
 		},
 	];
 

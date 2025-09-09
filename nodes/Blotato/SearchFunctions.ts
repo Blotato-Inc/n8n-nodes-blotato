@@ -12,6 +12,14 @@ type AccountSearchItem = {
 	username: string;
 };
 
+type TemplateSearchItem = {
+	id: string;
+	name: string;
+	description: string;
+	type: string;
+	inputs?: Record<string, any>;
+};
+
 export async function getAccounts(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
 	const platform = this.getNodeParameter('platform', 0) as string;
 	const options: IRequestOptions = {};
@@ -100,4 +108,30 @@ export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INode
 			],
 		};
 	}
+}
+
+export async function getTemplates(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
+	const options: IRequestOptions = {};
+
+	options.method = `GET`;
+
+	const credentials = await this.getCredentials('blotatoApi');
+	options.uri = credentials.server + '/v2/videos/templates';
+	const responseData = await this.helpers.requestWithAuthentication.call(
+		this,
+		'blotatoApi',
+		options,
+	);
+
+	const templates = JSON.parse(responseData).items || JSON.parse(responseData);
+
+	const results: INodeListSearchItems[] = templates.map(
+		(item: TemplateSearchItem) => ({
+			name: `${item.description}`,
+			value: item.id,
+			description: item.type ? `Type: ${item.type}` : undefined,
+		}),
+	);
+
+	return { results };
 }

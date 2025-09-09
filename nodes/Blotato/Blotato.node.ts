@@ -1,15 +1,64 @@
 import type {
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	IRequestOptions,
+	ResourceMapperFields,
+	ResourceMapperField,
+	FieldType,
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
-import { getAccounts, getSubaccounts } from './SearchFunctions';
+import { getAccounts, getSubaccounts, getTemplates } from './SearchFunctions';
+
+// Type definitions
+interface TemplateInput {
+	name: string;
+	label?: string;
+	type?: {
+		t: 'text' | 'image' | 'boolean' | 'enum' | 'array';
+		default?: any;
+		values?: string[];
+		itemType?: {
+			t: 'text' | 'number' | 'boolean' | 'object';
+		};
+	};
+}
+
+interface TemplateData {
+	id: string;
+	name?: string;
+	description?: string;
+	inputs?: TemplateInput[];
+}
+
 
 // Constants
 const THREAD_SUPPORTED_PLATFORMS = ['twitter', 'threads', 'bluesky'];
+
+// Binary upload constants
+const BINARY_UPLOAD_MAX_SIZE_MB = 15;
+const BINARY_UPLOAD_MAX_SIZE_BYTES = BINARY_UPLOAD_MAX_SIZE_MB * 1024 * 1024;
+
+// API endpoint constants
+const API_ENDPOINTS = {
+	VIDEO_TEMPLATES: '/v2/videos/templates',
+	VIDEO_FROM_TEMPLATES: '/v2/videos/from-templates',
+};
+
+// Blotato URLs for hint messages
+const BLOTATO_URLS = {
+	VIDEO_TEMPLATES: 'https://my.blotato.com/videos/templates',
+	API_DASHBOARD: 'https://my.blotato.com/api-dashboard',
+	MEDIA_REQUIREMENTS: 'https://help.blotato.com/api/media',
+	AUTOMATION_TEMPLATES: 'https://help.blotato.com/api/templates',
+};
+
+// Helper functions
+function extractTemplateId(param: { value: string } | string): string {
+	return typeof param === 'object' ? param.value : param;
+}
 
 export class Blotato implements INodeType {
 	description: INodeTypeDescription = {
@@ -32,6 +81,23 @@ export class Blotato implements INodeType {
 				required: true,
 			},
 		],
+		hints: [
+			{
+				message: `View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "video" && $parameter["operation"] === "create" && $parameter["templateId"] && $parameter["templateId"].value !== ""}}',
+			},
+			{
+				message: `View media requirements: <a href="${BLOTATO_URLS.MEDIA_REQUIREMENTS}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.MEDIA_REQUIREMENTS}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "media" && $parameter["operation"] === "upload"}}',
+			},
+			{
+				message: `View all automation templates: <a href="${BLOTATO_URLS.AUTOMATION_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.AUTOMATION_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "post"}}',
+			},
+		],
 		properties: [
 			// ----------------------------------
 			//         Top Level Resources
@@ -42,6 +108,10 @@ export class Blotato implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
+					{
+						name: 'Video',
+						value: 'video',
+					},
 					{
 						name: 'Media',
 						value: 'media',
@@ -57,6 +127,105 @@ export class Blotato implements INodeType {
 			// ----------------------------------
 			//         Operations
 			// ----------------------------------
+
+			// ------------- video --------------
+
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['video'],
+					},
+				},
+				options: [
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a video from a template',
+						action: 'Create video',
+					},
+				],
+				default: 'create',
+			},
+
+			// Template selection
+			{
+				displayName: 'Template',
+				name: 'templateId',
+				type: 'resourceLocator',
+				modes: [
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						placeholder: 'Select a template',
+						typeOptions: {
+							searchListMethod: 'getTemplates',
+							searchable: true,
+						},
+					},
+					{
+						displayName: 'By ID',
+						name: 'id',
+						type: 'string',
+						placeholder: 'e.g. template_123',
+						validation: [
+							{
+								type: 'regex',
+								properties: {
+									regex: '^[a-zA-Z0-9_-]+$',
+									errorMessage: 'Not a valid template ID',
+								},
+							},
+						],
+					},
+				],
+				default: { mode: 'list', value: '' },
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['video'],
+						operation: ['create'],
+					},
+				},
+				description: 'The template to use to create the video',
+			},
+
+			// Template inputs - using Resource Mapper for dynamic fields
+			{
+				displayName: 'Template Inputs',
+				name: 'templateInputs',
+				type: 'resourceMapper',
+				noDataExpression: true,
+				default: {
+					mappingMode: 'defineBelow',
+					value: {},
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['video'],
+						operation: ['create'],
+					},
+				},
+				typeOptions: {
+					loadOptionsDependsOn: ['templateId.value'],
+					resourceMapper: {
+						resourceMapperMethod: 'getTemplateInputSchema',
+						mode: 'map',
+						fieldWords: {
+							singular: 'input',
+							plural: 'inputs',
+						},
+						addAllFields: true,
+						multiKeyMatch: false,
+					},
+				},
+				description: 'Map the input fields required by the selected template',
+			},
 
 			// ------------- media --------------
 
@@ -94,7 +263,7 @@ export class Blotato implements INodeType {
 						operation: ['upload'],
 					},
 				},
-				description: 'Whether to use binary data instead of URL',
+				description: `Whether to use binary data instead of URL. Note: Binary uploads are limited to ${BINARY_UPLOAD_MAX_SIZE_MB}MB. For larger files, use URL upload with services like Google Drive (up to 60MB), Dropbox, Frame.io, or S3/GCS buckets.`,
 			},
 
 			// Media URL field
@@ -817,6 +986,172 @@ export class Blotato implements INodeType {
 		listSearch: {
 			getAccounts,
 			getSubaccounts,
+			getTemplates,
+		},
+		resourceMapping: {
+			async getTemplateInputSchema(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
+				const templateIdParam = this.getNodeParameter('templateId', 0) as { value: string } | string;
+				const templateId = extractTemplateId(templateIdParam);
+
+				if (!templateId) {
+					return {
+						fields: [],
+					};
+				}
+
+				try {
+					// Call API to get template details including inputs
+					const credentials = await this.getCredentials('blotatoApi');
+					const options: IRequestOptions = {
+						method: 'GET',
+						uri: `${credentials.server}${API_ENDPOINTS.VIDEO_TEMPLATES}`,
+						qs: {
+							id: templateId,
+							fields: 'id,name,description,inputs'
+						},
+						json: true,
+					};
+
+					const responseData = await this.helpers.requestWithAuthentication.call(
+						this,
+						'blotatoApi',
+						options,
+					);
+
+					// Parse the response
+					const templatesData = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
+
+					// The API returns an array of templates when filtered by ID
+					const templates = templatesData.items || templatesData;
+					const templateData: TemplateData = Array.isArray(templates) ? templates[0] : templates;
+
+					// Check if we got a template
+					if (!templateData) {
+						return {
+							fields: [
+								{
+									id: 'error',
+									displayName: `Template not found: ${templateId}`,
+									required: false,
+									defaultMatch: false,
+									type: 'string',
+									display: true,
+									canBeUsedToMatch: false,
+								},
+							],
+						};
+					}
+
+					// Check if template has inputs field
+					if (!templateData.inputs || !Array.isArray(templateData.inputs)) {
+						// Return empty if no inputs
+						return {
+							fields: [],
+						};
+					}
+
+					// Convert template inputs to Resource Mapper schema format
+					const fields: ResourceMapperField[] = [];
+					const inputs: TemplateInput[] = templateData.inputs;
+
+					// Inputs is an array of input definitions
+					for (const input of inputs) {
+						// Determine the n8n field type based on the template input type
+						let fieldType: FieldType = 'string';
+
+						if (input.type) {
+							switch (input.type.t) {
+								case 'text':
+								case 'image':
+									fieldType = 'string';
+									break;
+								case 'boolean':
+									fieldType = 'boolean';
+									break;
+								case 'enum':
+									fieldType = 'options';
+									break;
+								case 'array':
+									// For arrays, we'll use string type and expect JSON input
+									fieldType = 'string' as FieldType;
+									break;
+								default:
+									fieldType = 'string';
+							}
+						}
+
+						// Determine if field is required first
+						// Field is optional if it has a 'default' property (even if empty string), required if no default property
+						const isRequired = !input.type || !('default' in input.type);
+
+						// Build the display name with required/optional indicator
+						let displayName = input.label || input.name;
+
+						// Add required indicator only
+						if (isRequired) {
+							// Required fields get an asterisk at the end
+							displayName += ' *';
+						}
+						// Optional fields no longer get the (Optional) prefix
+
+						// Add format hints
+						if (input.type?.t === 'array') {
+							// Check the itemType to determine array content type
+							if (input.type.itemType?.t === 'number') {
+								// Array of numbers
+								displayName += ` (e.g. [1, 2])`;
+							} else if (input.type.itemType?.t === 'boolean') {
+								// Array of booleans
+								displayName += ` (e.g. [true, false])`;
+							} else if (input.type.itemType?.t === 'object') {
+								// Array of objects
+								displayName += ` (e.g. [{"key": "value"}])`;
+							} else {
+								// Default to array of strings (covers text, image, enum, etc.)
+								displayName += ` (e.g. ["item 1", "item 2"])`;
+							}
+						} else if (input.type?.t === 'image') {
+							// For image/URL fields
+							displayName += ` (publicly accessible URL)`;
+						}
+
+						const field: ResourceMapperField = {
+							id: input.name,
+							displayName: displayName,
+							required: isRequired,
+							defaultMatch: false,
+							type: fieldType,
+							display: true,
+							canBeUsedToMatch: false,
+						};
+
+						// For enum types, add the options
+						if (input.type?.t === 'enum' && input.type.values) {
+							field.options = input.type.values.map((value: string) => ({
+								name: value.charAt(0).toUpperCase() + value.slice(1),
+								value: value,
+							}));
+						}
+
+						fields.push(field);
+					}
+
+					// Sort fields: required fields first, optional fields second
+					fields.sort((a, b) => {
+						// Required fields (true) should come before optional fields (false)
+						if (a.required && !b.required) return -1;
+						if (!a.required && b.required) return 1;
+						return 0; // Keep original order for fields with same required status
+					});
+
+					return { fields };
+				} catch (error) {
+					// On error, return empty fields
+					return {
+						fields: [],
+					};
+				}
+			},
 		},
 	};
 
@@ -830,7 +1165,58 @@ export class Blotato implements INodeType {
 
 			const options: IRequestOptions = {};
 
-			if (resource === 'media') {
+			if (resource === 'video') {
+				options.json = true;
+				options.method = 'POST';
+				options.uri = API_ENDPOINTS.VIDEO_FROM_TEMPLATES;
+
+				if (operation === 'create') {
+					const templateIdParam = this.getNodeParameter('templateId', i) as { value: string } | string;
+					const templateId = extractTemplateId(templateIdParam);
+
+					// Get the template inputs from Resource Mapper
+					const templateInputsData = this.getNodeParameter('templateInputs', i) as {
+						mappingMode?: string;
+						value?: Record<string, any>;
+					};
+
+					let inputs: Record<string, any> = {};
+
+					// Handle Resource Mapper data format
+					if (templateInputsData && templateInputsData.value) {
+						inputs = templateInputsData.value;
+
+						// Parse JSON strings for array-type inputs with improved error handling
+						for (const [key, value] of Object.entries(inputs)) {
+							if (typeof value === 'string') {
+								const trimmedValue = value.trim();
+								if (trimmedValue.startsWith('[') || trimmedValue.startsWith('{')) {
+									try {
+										inputs[key] = JSON.parse(trimmedValue);
+									} catch (error) {
+										// Log warning but keep as string if parsing fails
+										this.logger.warn(
+											`Failed to parse JSON for field '${key}': ${error instanceof Error ? error.message : 'Unknown error'}`,
+										);
+									}
+								}
+							}
+						}
+					}
+
+					options.body = {
+						templateId,
+						inputs,
+						render: true, // Auto-render the video
+					};
+				} else {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Operation "${operation}" is not supported for resource "video".`,
+						{ itemIndex: i },
+					);
+				}
+			} else if (resource === 'media') {
 				options.json = true;
 				options.method = 'POST';
 				options.uri = '/v2/media';
@@ -845,18 +1231,16 @@ export class Blotato implements INodeType {
 
 						// Convert binary data to data URI
 						const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
-						
-						// 15MB file size limit
-						const maxSizeBytes = 15 * 1024 * 1024; // 15MB
-						if (dataBuffer.length > maxSizeBytes) {
+
+						if (dataBuffer.length > BINARY_UPLOAD_MAX_SIZE_BYTES) {
 							const sizeMB = (dataBuffer.length / (1024 * 1024)).toFixed(2);
 							throw new NodeOperationError(
 								this.getNode(),
-								`File size (${sizeMB}MB) exceeds 15MB limit. Large files should be uploaded via URL instead of binary data. You can use Google Drive (up to 60MB), Dropbox, Frame.io, or similar services. S3/GCS buckets are recommended for very large files.`,
+								`File size (${sizeMB}MB) exceeds ${BINARY_UPLOAD_MAX_SIZE_MB}MB limit. Large files should be uploaded via URL instead of binary data. You can use Google Drive (up to 60MB), Dropbox, Frame.io, or similar services. S3/GCS buckets are recommended for very large files.`,
 								{ itemIndex: i },
 							);
 						}
-						
+
 						const base64 = dataBuffer.toString('base64');
 						const mimeType = binaryData.mimeType || 'application/octet-stream';
 						const dataUri = `data:${mimeType};base64,${base64}`;
@@ -923,7 +1307,6 @@ export class Blotato implements INodeType {
 					youtubeMadeForKids?: boolean;
 				};
 
-				this.logger.debug(`PostOptions: ${JSON.stringify(postOptions)}`);
 
 				if (postOptions.scheduledTime) {
 					// Ensure scheduledTime has timezone - append 'Z' for UTC if no timezone specified
@@ -1131,7 +1514,6 @@ export class Blotato implements INodeType {
 				throw new NodeOperationError(this.getNode(), `Resource "${resource}" is not supported.`);
 			}
 
-			this.logger.debug(`Blotato API Request body:\n${JSON.stringify(options.body, null, 2)}`);
 
 			const credentials = await this.getCredentials('blotatoApi');
 			// prepend server to path
