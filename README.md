@@ -20,13 +20,24 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-This node provides two main operations for interacting with Blotato:
+This node provides three main resources for interacting with Blotato:
+
+### Video Resource
+Create AI-generated videos and carousels from templates.
+- **Create**: Generate videos and carousels from pre-built templates with dynamic inputs
+- **Get**: Retrieve video status and details by ID
+- **Delete**: Remove a video by ID
+- **Features**:
+  - Template-based video and carousel generation
+  - Dynamic input fields based on template requirements
+  - Support for leading AI image and video models
+  - Automatic rendering upon creation
 
 ### Media Upload
 Upload media files (e.g. images and videos) for your social media content using the Media resource.
 - **Upload from URL**: Upload media files from a URL
 - **Upload from Binary**: Upload media files from binary data
-- **Size limit**: 200MB maximum file size
+- **Size limit**: 60MB for binary uploads, larger files should use URL upload
 - **Rate limit**: 10 requests per minute
 
 ### Post Publish  
@@ -37,9 +48,9 @@ Post content across multiple social media platforms using the Post resource.
   - Schedule posts for later
   - Add captions, hashtags, and media
   - Platform-specific options, such as, but not limited to:
-    - Youtube: Privacy settings, subscriber notifications, Made for Kids setting
+    - Youtube: Privacy settings, subscriber notifications, Made for Kids setting, Contains Synthetic Media
     - Pinterest: Board selection, pin title, alt text, and link
-    - Tiktok: Privacy levels, comment/duet settings
+    - Tiktok: Privacy levels, comment/duet settings, Post as Draft, Slideshow Title, Image Cover Index, Video Cover Timestamp
     - Instagram: Post, Reel, or Story options
     - Linkedin: Personal profile or Company page
     - Facebook: Page selection, Video/Reel options
@@ -72,17 +83,25 @@ To use this node, you need to create credentials in n8n:
 
 ## Usage
 
-### Example: Multi-Platform Publishing
+### Example: AI Video to Multi-Platform Publishing
+
+1. **Create AI video/carousel** using the Video resource where you select a template
+2. **Wait for generation** by checking status with Video Get operation
+3. **Publish to multiple platforms** using the Post resource with the generated media URL
+
+### Example: Upload and Publish
 
 1. **Upload your media** using the Media resource and Upload operation
 2. **Publish to multiple platforms** using the Post resource and Create operation
 
 ### Tips
 
+- **Video Templates**: Browse available templates at [Blotato Templates](https://my.blotato.com/videos/new)
 - **Rate Limits**: Blotato has a rate limit of 10 media uploads per minute
-- **Media Requirements**: Each platform has specific [media requirements](https://help.blotato.com/tips-and-tricks/social-platform-requirements)
-- **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601
+- **Media Requirements**: Each platform has specific [media requirements](https://help.blotato.com/api/media)
+- **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601 format
 - **Debugging**: To view all your API requests, responses, and error messages, go to your [Blotato API Dashboard](https://my.blotato.com/api-dashboard)
+- **Error Handling**: The node supports n8n's error output paths - use "Continue (using error output)" to handle errors gracefully
 
 ## Resources
 
@@ -96,7 +115,8 @@ Blotato is your all-in-one AI content engine to create and distribute social med
 
 ### Key Features
 - **Multi-Platform Publishing**: Schedule and publish to all major social platforms
-- **AI Generation**: Create AI images, videos, and voices using the best AI models available
+- **Viral Templates**: Create social media videos and carousels using prebuilt viral templates
+- **Access to AI Models**: Access the leading AI image and video models, all in one unified tool
 - **Content Remixing**: Transform content between platforms (e.g., Youtube videos to Linkedin posts)
 
 ### Who is Blotato For?
