@@ -8,8 +8,9 @@ import type {
 	ResourceMapperFields,
 	ResourceMapperField,
 	FieldType,
+	JsonObject,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionType, NodeOperationError, NodeApiError } from 'n8n-workflow';
 import { getAccounts, getSubaccounts, getTemplates } from './SearchFunctions';
 
 // Type definitions
@@ -51,12 +52,11 @@ const API_ENDPOINTS = {
 
 // Blotato URLs for hint messages
 const BLOTATO_URLS = {
-	VIDEO_TEMPLATES: 'https://my.blotato.com/videos/templates',
+	VIDEO_TEMPLATES: 'https://my.blotato.com/videos/new',
 	API_DASHBOARD: 'https://my.blotato.com/api-dashboard',
 	MEDIA_REQUIREMENTS: 'https://help.blotato.com/api/media',
 	AUTOMATION_TEMPLATES: 'https://help.blotato.com/api/templates',
 	BILLING: 'https://my.blotato.com/settings/billing',
-	AI_VIDEO_CREDITS: 'https://help.blotato.com/features/videos/ai-video-credits',
 };
 
 // Helper functions
@@ -87,9 +87,19 @@ export class Blotato implements INodeType {
 		],
 		hints: [
 			{
-				message: `View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a><br><br>Credit costs for AI images/videos: <a href="${BLOTATO_URLS.AI_VIDEO_CREDITS}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.AI_VIDEO_CREDITS}</a>`,
+				message: `View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
 				type: 'info',
 				displayCondition: '={{$parameter["resource"] === "video" && $parameter["operation"] === "create" && $parameter["templateId"] && $parameter["templateId"].value !== ""}}',
+			},
+			{
+				message: `API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "video" && $parameter["operation"] === "get"}}',
+			},
+			{
+				message: `API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "video" && $parameter["operation"] === "delete"}}',
 			},
 			{
 				message: `View media requirements: <a href="${BLOTATO_URLS.MEDIA_REQUIREMENTS}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.MEDIA_REQUIREMENTS}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
@@ -97,7 +107,7 @@ export class Blotato implements INodeType {
 				displayCondition: '={{$parameter["resource"] === "media" && $parameter["operation"] === "upload"}}',
 			},
 			{
-				message: `View all automation templates: <a href="${BLOTATO_URLS.AUTOMATION_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.AUTOMATION_TEMPLATES}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				message: `View all automation templates: <a href="${BLOTATO_URLS.AUTOMATION_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.AUTOMATION_TEMPLATES}</a><br><br>View all video/carousel templates: <a href="${BLOTATO_URLS.VIDEO_TEMPLATES}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.VIDEO_TEMPLATES}</a><br><br>View media requirements: <a href="${BLOTATO_URLS.MEDIA_REQUIREMENTS}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.MEDIA_REQUIREMENTS}</a><br><br>API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
 				type: 'info',
 				displayCondition: '={{$parameter["resource"] === "post"}}',
 			},
@@ -592,6 +602,39 @@ export class Blotato implements INodeType {
 				description: 'Set the privacy level for the TikTok post',
 			},
 			{
+				displayName: 'Slideshow Title',
+				name: 'postCreateTiktokOptionTitle',
+				type: 'string',
+				default: '',
+				typeOptions: {
+					maxLength: 90,
+				},
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['tiktok'],
+					},
+				},
+				description: 'Title for Tiktok slideshow, less than 90 characters. Defaults to first 90 characters of the \'text\' field.',
+				hint: 'Applies to Tiktok slideshows only.',
+			},
+			{
+				displayName: 'Post As Draft',
+				name: 'postCreateTiktokOptionIsDraft',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['tiktok'],
+					},
+				},
+				description: 'Whether to post a DRAFT video/slideshow. It will go to your Tiktok Inbox > System Notifications. Finalize your publishing options in the Tiktok app.',
+				hint: 'Post a DRAFT video/slideshow. It will go to your Tiktok Inbox > System Notifications. Finalize your publishing options in the Tiktok app.'
+			},
+			{
 				displayName: 'Disable Comments',
 				name: 'postCreateTiktokOptionDisabledComments',
 				type: 'boolean',
@@ -601,6 +644,9 @@ export class Blotato implements INodeType {
 						resource: ['post'],
 						operation: ['create'],
 						platform: ['tiktok'],
+					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
 					},
 				},
 				description: 'Whether to disable comments on this post',
@@ -616,6 +662,9 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 						platform: ['tiktok'],
 					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
+					},
 				},
 				description: 'Whether to disable duet for this post',
 			},
@@ -629,6 +678,9 @@ export class Blotato implements INodeType {
 						resource: ['post'],
 						operation: ['create'],
 						platform: ['tiktok'],
+					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
 					},
 				},
 				description: 'Whether to disable stitch for this post',
@@ -644,6 +696,9 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 						platform: ['tiktok'],
 					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
+					},
 				},
 				description: 'Whether this post contains branded content',
 			},
@@ -657,6 +712,9 @@ export class Blotato implements INodeType {
 						resource: ['post'],
 						operation: ['create'],
 						platform: ['tiktok'],
+					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
 					},
 				},
 				description: 'Whether this post is about your own brand',
@@ -672,6 +730,9 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 						platform: ['tiktok'],
 					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
+					},
 				},
 				description: 'Whether this content is AI generated',
 			},
@@ -685,6 +746,9 @@ export class Blotato implements INodeType {
 						resource: ['post'],
 						operation: ['create'],
 						platform: ['tiktok'],
+					},
+					hide: {
+						postCreateTiktokOptionIsDraft: [true],
 					},
 				},
 				description: 'Whether to automatically add music. Only works for Tiktok slideshows.',
@@ -840,6 +904,34 @@ export class Blotato implements INodeType {
 				},
 				description: 'Whether to notify subscribers about this video',
 			},
+			{
+				displayName: 'Made for Kids',
+				name: 'postCreateYoutubeOptionMadeForKids',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['youtube'],
+					},
+				},
+				description: 'Whether this video is made for kids',
+			},
+			{
+				displayName: 'Contains Synthetic Media',
+				name: 'postCreateYoutubeOptionContainsSyntheticMedia',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+						platform: ['youtube'],
+					},
+				},
+				description: 'Whether the media contains synthetic content, such as AI images, AI videos, or AI avatars',
+			},
 
 			// Options collection - placed last so users see required fields first
 			{
@@ -855,6 +947,25 @@ export class Blotato implements INodeType {
 					},
 				},
 				options: [
+					{
+						displayName: 'Image Cover Index',
+						name: 'imageCoverIndex',
+						type: 'number',
+						default: 0,
+						typeOptions: {
+							minValue: 0,
+						},
+						displayOptions: {
+							show: {
+								'/platform': ['tiktok'],
+							},
+							hide: {
+								'/postCreateTiktokOptionIsDraft': [true],
+							},
+						},
+						description: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
+						hint: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
+					},
 					{
 						displayName: 'Linkedin Page',
 						name: 'linkedinPageId',
@@ -892,18 +1003,6 @@ export class Blotato implements INodeType {
 							},
 						},
 						description: 'Post to a Linkedin Company Page instead of your personal profile',
-					},
-					{
-						displayName: 'Made for Kids',
-						name: 'youtubeMadeForKids',
-						type: 'boolean',
-						default: false,
-						displayOptions: {
-							show: {
-								'/platform': ['youtube'],
-							},
-						},
-						description: 'Whether this video is made for kids',
 					},
 					{
 						displayName: 'Media Type',
@@ -1010,6 +1109,26 @@ export class Blotato implements INodeType {
 						description:
 							'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
 					},
+					{
+						displayName: 'Video Cover Timestamp',
+						name: 'videoCoverTimestamp',
+						type: 'number',
+						default: 0,
+						typeOptions: {
+							minValue: 0,
+							numberPrecision: 2,
+						},
+						displayOptions: {
+							show: {
+								'/platform': ['tiktok'],
+							},
+							hide: {
+								'/postCreateTiktokOptionIsDraft': [true],
+							},
+						},
+						description: 'Only applies to Tiktok videos. Location in milliseconds of video to be used as thumbnail cover. Must be whole number (1000 for 1 second). If not provided, the frame at 0 milliseconds will be used.',
+						hint: 'Only applies to Tiktok videos. Location in milliseconds of video to be used as thumbnail cover. Must be whole number (1000 for 1 second). If not provided, the frame at 0 milliseconds will be used.'
+					},
 				],
 			},
 		],
@@ -1045,11 +1164,19 @@ export class Blotato implements INodeType {
 						json: true,
 					};
 
-					const responseData = await this.helpers.requestWithAuthentication.call(
-						this,
-						'blotatoApi',
-						options,
-					);
+					let responseData;
+					try {
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'blotatoApi',
+							options,
+						);
+					} catch (error) {
+						// Return empty fields on error to prevent blocking the UI
+						return {
+							fields: [],
+						};
+					}
 
 					// Parse the response
 					const templatesData = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
@@ -1058,7 +1185,6 @@ export class Blotato implements INodeType {
 					const templates = templatesData.items || templatesData;
 					const templateData: TemplateData = Array.isArray(templates) ? templates[0] : templates;
 
-					// Check if we got a template
 					if (!templateData) {
 						return {
 							fields: [
@@ -1075,9 +1201,7 @@ export class Blotato implements INodeType {
 						};
 					}
 
-					// Check if template has inputs field
 					if (!templateData.inputs || !Array.isArray(templateData.inputs)) {
-						// Return empty if no inputs
 						return {
 							fields: [],
 						};
@@ -1257,7 +1381,7 @@ export class Blotato implements INodeType {
 					options.uri = `${API_ENDPOINTS.VIDEO_GET}/${videoId}`;
 				} else if (operation === 'delete') {
 					const videoId = this.getNodeParameter('videoId', i) as string;
-					
+
 					if (!videoId) {
 						throw new NodeOperationError(
 							this.getNode(),
@@ -1265,7 +1389,7 @@ export class Blotato implements INodeType {
 							{ itemIndex: i },
 						);
 					}
-					
+
 					options.method = 'DELETE';
 					options.uri = `${API_ENDPOINTS.VIDEO_DELETE}/${videoId}`;
 				} else {
@@ -1375,7 +1499,8 @@ export class Blotato implements INodeType {
 					pinterestAltText?: string;
 					pinterestLink?: string;
 					threadsReplyControl?: string;
-					youtubeMadeForKids?: boolean;
+					imageCoverIndex?: number;
+					videoCoverTimestamp?: number;
 				};
 
 
@@ -1468,6 +1593,19 @@ export class Blotato implements INodeType {
 						}
 						break;
 					case 'tiktok':
+						const isDraft = this.getNodeParameter(
+							'postCreateTiktokOptionIsDraft',
+							i,
+							false,
+						) as boolean;
+						
+						// Get optional title for slideshows
+						const tiktokTitle = this.getNodeParameter(
+							'postCreateTiktokOptionTitle',
+							i,
+							'',
+						) as string;
+						
 						options.body.post.target = {
 							...options.body.post.target,
 							privacyLevel: this.getNodeParameter(
@@ -1477,29 +1615,44 @@ export class Blotato implements INodeType {
 							disabledComments: this.getNodeParameter(
 								'postCreateTiktokOptionDisabledComments',
 								i,
+								false,
 							) as boolean,
 							disabledDuet: this.getNodeParameter(
 								'postCreateTiktokOptionDisabledDuet',
 								i,
+								false,
 							) as boolean,
 							disabledStitch: this.getNodeParameter(
 								'postCreateTiktokOptionDisabledStitch',
 								i,
+								false,
 							) as boolean,
 							isBrandedContent: this.getNodeParameter(
 								'postCreateTiktokOptionIsBrandedContent',
 								i,
+								false,
 							) as boolean,
-							isYourBrand: this.getNodeParameter('postCreateTiktokOptionIsYourBrand', i) as boolean,
+							isYourBrand: this.getNodeParameter(
+								'postCreateTiktokOptionIsYourBrand',
+								i,
+								false,
+							) as boolean,
 							isAiGenerated: this.getNodeParameter(
 								'postCreateTiktokOptionIsAiGenerated',
 								i,
+								false,
 							) as boolean,
 							autoAddMusic: this.getNodeParameter(
 								'postCreateTiktokOptionAutoAddMusic',
 								i,
-								undefined,
-							) as boolean | undefined,
+								false,
+							) as boolean,
+							isDraft: isDraft,
+							// Optional title for slideshows (visible even in draft mode)
+							...(tiktokTitle ? { title: tiktokTitle } : {}),
+							// Cover settings should not be sent when posting as draft
+							imageCoverIndex: isDraft ? undefined : postOptions.imageCoverIndex,
+							videoCoverTimestamp: isDraft ? undefined : postOptions.videoCoverTimestamp,
 						};
 						break;
 					case 'bluesky':
@@ -1565,10 +1718,14 @@ export class Blotato implements INodeType {
 							'postCreateYoutubeOptionShouldNotifySubscribers',
 							i,
 						) as boolean;
-						// Optional field from options
-						if (postOptions.youtubeMadeForKids !== undefined) {
-							options.body.post.target.isMadeForKids = postOptions.youtubeMadeForKids;
-						}
+						options.body.post.target.isMadeForKids = this.getNodeParameter(
+							'postCreateYoutubeOptionMadeForKids',
+							i,
+						) as boolean;
+						options.body.post.target.containsSyntheticMedia = this.getNodeParameter(
+							'postCreateYoutubeOptionContainsSyntheticMedia',
+							i,
+						) as boolean;
 						break;
 					case 'twitter':
 						// Twitter requires no additional configuration
@@ -1579,21 +1736,51 @@ export class Blotato implements INodeType {
 						throw new NodeOperationError(
 							this.getNode(),
 							`Platform "${platform}" is not supported for resource "post".`,
+							{ itemIndex: i },
 						);
 				}
 			} else {
-				throw new NodeOperationError(this.getNode(), `Resource "${resource}" is not supported.`);
+				throw new NodeOperationError(this.getNode(), `Resource "${resource}" is not supported.`, { itemIndex: i });
 			}
 
 
 			const credentials = await this.getCredentials('blotatoApi');
 			// prepend server to path
 			options.uri = credentials.server + options.uri!;
-			const response = await this.helpers.requestWithAuthentication.call(
-				this,
-				'blotatoApi',
-				options,
-			);
+			
+			let response;
+			try {
+				response = await this.helpers.requestWithAuthentication.call(
+					this,
+					'blotatoApi',
+					options,
+				);
+			} catch (error) {
+				if (this.continueOnFail()) {
+					const errorMessage = error.message || 'An error occurred';
+					const errorDescription = error.description || error.response?.data?.message || error.response?.data?.error || '';
+					
+					const combinedMessage = errorDescription && errorDescription !== errorMessage
+						? `${errorMessage}: ${errorDescription}`
+						: errorMessage;
+					
+					returnData.push({
+						json: {
+							error: combinedMessage,
+							errorDetails: error,
+						},
+						pairedItem: { item: i },
+						error: new NodeApiError(this.getNode(), error as JsonObject, {
+							itemIndex: i,
+						}),
+					});
+					continue;
+				}
+				
+				throw new NodeApiError(this.getNode(), error as JsonObject, {
+					itemIndex: i,
+				});
+			}
 
 			// Handle different operations
 			if (resource === 'video' && operation === 'get') {
@@ -1602,7 +1789,7 @@ export class Blotato implements INodeType {
 
 				if (status && ['generating-script', 'script-ready', 'queueing'].includes(status)) {
 					// Add a hint message to the response
-					const hintMessage = `⚠️ Your video/carousel is not yet complete. Wait a little longer, and check you have sufficient credits if you are generating AI images or AI videos: ${BLOTATO_URLS.BILLING}`;
+					const hintMessage = `⚠️ Your video/carousel is not done yet. Wait a little longer, and check you have sufficient credits if you are generating AI images or AI videos: ${BLOTATO_URLS.BILLING}`;
 
 					// Add the hint as a property in the response
 					if (responseData.item) {
@@ -1619,12 +1806,12 @@ export class Blotato implements INodeType {
 			} else if (resource === 'video' && operation === 'delete') {
 				// DELETE returns 204 No Content, so we create a success message
 				const videoId = this.getNodeParameter('videoId', i) as string;
-				returnData.push({ 
-					json: { 
+				returnData.push({
+					json: {
 						success: true,
-						message: `Video ${videoId} deleted successfully`
-					}, 
-					pairedItem: { item: i } 
+						message: `Video ID ${videoId} deleted successfully`
+					},
+					pairedItem: { item: i }
 				});
 			} else {
 				returnData.push({ json: response, pairedItem: { item: i } });

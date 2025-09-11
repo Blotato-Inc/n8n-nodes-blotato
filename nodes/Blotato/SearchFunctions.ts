@@ -29,11 +29,17 @@ export async function getAccounts(this: ILoadOptionsFunctions): Promise<INodeLis
 
 	const credentials = await this.getCredentials('blotatoApi');
 	options.uri = credentials.server + '/v2/users/me/accounts';
-	const responseData = await this.helpers.requestWithAuthentication.call(
-		this,
-		'blotatoApi',
-		options,
-	);
+	
+	let responseData;
+	try {
+		responseData = await this.helpers.requestWithAuthentication.call(
+			this,
+			'blotatoApi',
+			options,
+		);
+	} catch (error) {
+		return { results: [] };
+	}
 
 	const results: INodeListSearchItems[] = JSON.parse(responseData).items.map(
 		(item: AccountSearchItem) => ({
@@ -80,11 +86,19 @@ export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INode
 
 		const credentials = await this.getCredentials('blotatoApi');
 		options.uri = credentials.server + `/v2/users/me/accounts/${accountId}/subaccounts`;
-		const responseData = await this.helpers.requestWithAuthentication.call(
-			this,
-			'blotatoApi',
-			options,
-		);
+		
+		let responseData;
+		try {
+			responseData = await this.helpers.requestWithAuthentication.call(
+				this,
+				'blotatoApi',
+				options,
+			);
+		} catch (error) {
+			// For list search functions, return empty results on error
+			// This prevents blocking the UI when credentials are invalid
+			return { results: [] };
+		}
 
 		const results: INodeListSearchItems[] = JSON.parse(responseData).items.map(
 			(item: SubaccountSearchItem) => ({
@@ -117,11 +131,17 @@ export async function getTemplates(this: ILoadOptionsFunctions): Promise<INodeLi
 
 	const credentials = await this.getCredentials('blotatoApi');
 	options.uri = credentials.server + '/v2/videos/templates';
-	const responseData = await this.helpers.requestWithAuthentication.call(
-		this,
-		'blotatoApi',
-		options,
-	);
+	
+	let responseData;
+	try {
+		responseData = await this.helpers.requestWithAuthentication.call(
+			this,
+			'blotatoApi',
+			options,
+		);
+	} catch (error) {
+		return { results: [] };
+	}
 
 	const templates = JSON.parse(responseData).items || JSON.parse(responseData);
 
