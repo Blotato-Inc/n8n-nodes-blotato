@@ -40,18 +40,21 @@ Upload media files (e.g. images and videos) for your social media content using 
 - **Size limit**: 60MB for binary uploads, larger files should use URL upload
 - **Rate limit**: 10 requests per minute
 
-### Post Publish  
+### Post Publish
 Post content across multiple social media platforms using the Post resource.
 - **Platforms supported**: Twitter, Linkedin, Facebook, Instagram, Pinterest, Tiktok, Threads, Bluesky, Youtube
+- **Operations**:
+  - **Create**: Publish content to social media platforms
+  - **Get**: Check post status and details by submission ID
 - **Features**:
   - Multi-platform publishing with a single workflow
-  - Schedule posts for later
+  - Schedule posts for later or use the next available free slot
   - Add captions, hashtags, and media
   - Platform-specific options, such as, but not limited to:
     - Youtube: Privacy settings, subscriber notifications, Made for Kids setting, Contains Synthetic Media
     - Pinterest: Board selection, pin title, alt text, and link
     - Tiktok: Privacy levels, comment/duet settings, Post as Draft, Slideshow Title, Image Cover Index, Video Cover Timestamp
-    - Instagram: Post, Reel, or Story options
+    - Instagram: Post, Reel, or Story options, Audio Name (for Reels), Collaborators
     - Linkedin: Personal profile or Company page
     - Facebook: Page selection, Video/Reel options
     - Threads: Reply control settings
@@ -88,18 +91,21 @@ To use this node, you need to create credentials in n8n:
 1. **Create AI video/carousel** using the Video resource where you select a template
 2. **Wait for generation** by checking status with Video Get operation
 3. **Publish to multiple platforms** using the Post resource with the generated media URL
+4. **Check post status** using the Post Get operation to verify successful publishing
 
 ### Example: Upload and Publish
 
 1. **Upload your media** using the Media resource and Upload operation
 2. **Publish to multiple platforms** using the Post resource and Create operation
+3. **Track publishing progress** using the Post Get operation with the submission ID
 
 ### Tips
 
 - **Video Templates**: Browse available templates at [Blotato Templates](https://my.blotato.com/videos/new)
 - **Rate Limits**: Blotato has a rate limit of 10 media uploads per minute
 - **Media Requirements**: Each platform has specific [media requirements](https://help.blotato.com/api/media)
-- **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601 format
+- **Scheduling**: Use the `scheduledTime` parameter to schedule posts in ISO 8601 format, or enable `Schedule Next Free Slot` to automatically schedule posts in the next available time slot
+- **Instagram Collaborators**: Add up to 3 Instagram usernames as collaborators on your posts
 - **Debugging**: To view all your API requests, responses, and error messages, go to your [Blotato API Dashboard](https://my.blotato.com/api-dashboard)
 - **Error Handling**: The node supports n8n's error output paths - use "Continue (using error output)" to handle errors gracefully
 

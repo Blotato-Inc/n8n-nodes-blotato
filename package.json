@@ -1,6 +1,6 @@
 {
 	"name": "@blotato/n8n-nodes-blotato",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Official n8n Blotato node",
 	"keywords": [
 		"n8n-community-node-package",

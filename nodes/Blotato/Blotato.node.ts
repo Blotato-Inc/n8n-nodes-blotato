@@ -48,6 +48,7 @@ const API_ENDPOINTS = {
 	VIDEO_FROM_TEMPLATES: '/v2/videos/from-templates',
 	VIDEO_GET: '/v2/videos/creations',
 	VIDEO_DELETE: '/v2/videos',
+	POST_GET: '/v2/posts',
 };
 
 // Blotato URLs for hint messages
@@ -360,8 +361,31 @@ export class Blotato implements INodeType {
 						description: 'Create post',
 						action: 'Create post',
 					},
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get post status by submission ID',
+						action: 'Get post',
+					},
 				],
 				default: 'create',
+			},
+
+			// Post Submission ID for Get operation
+			{
+				displayName: 'Post Submission ID',
+				name: 'postSubmissionId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['get'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. 123e4567-e89b-12d3-a456-426614174000',
+				description: 'The ID of the post submission to check',
 			},
 
 			// platform
@@ -468,6 +492,21 @@ export class Blotato implements INodeType {
 				description: 'Comma-separated list of media URLs',
 				placeholder:
 					'https://database.blotato.com/image1.jpg, https://database.blotato.com/image2.jpg',
+			},
+
+			// Schedule Next Free Slot
+			{
+				displayName: 'Schedule Next Free Slot',
+				name: 'useNextFreeSlot',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						resource: ['post'],
+						operation: ['create'],
+					},
+				},
+				description: 'Whether to schedule post in next free slot for this account. If Scheduled Time is provided, this option is ignored.',
 			},
 
 			// Thread input method toggle
@@ -947,6 +986,36 @@ export class Blotato implements INodeType {
 					},
 				},
 				options: [
+					{
+						displayName: 'Audio Name',
+						name: 'instagramAudioName',
+						type: 'string',
+						default: '',
+						typeOptions: {
+							minLength: 1,
+							maxLength: 2200,
+						},
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description: 'For Reels only. Name of the audio of your Reels media. You can only rename once, either while creating a reel or after from the audio page.',
+						placeholder: 'My Custom Audio Name',
+					},
+					{
+						displayName: 'Collaborators',
+						name: 'instagramCollaborators',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description: 'Comma-separated list of Instagram usernames to add as collaborators (min: 1, max: 3)',
+						placeholder: 'username1, username2, username3',
+					},
 					{
 						displayName: 'Image Cover Index',
 						name: 'imageCoverIndex',
@@ -1442,6 +1511,21 @@ export class Blotato implements INodeType {
 				}
 			} else if (resource === 'post') {
 				options.json = true;
+
+				if (operation === 'get') {
+					const postSubmissionId = this.getNodeParameter('postSubmissionId', i) as string;
+
+					if (!postSubmissionId) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Post Submission ID is required',
+							{ itemIndex: i },
+						);
+					}
+
+					options.method = 'GET';
+					options.uri = `${API_ENDPOINTS.POST_GET}/${postSubmissionId}`;
+				} else if (operation === 'create') {
 				options.method = 'POST';
 				options.uri = '/v2/posts';
 
@@ -1496,6 +1580,8 @@ export class Blotato implements INodeType {
 					linkedinPageId?: string | { value?: string };
 					facebookMediaType?: string;
 					instagramMediaType?: string;
+					instagramAudioName?: string;
+					instagramCollaborators?: string;
 					pinterestAltText?: string;
 					pinterestLink?: string;
 					threadsReplyControl?: string;
@@ -1518,6 +1604,10 @@ export class Blotato implements INodeType {
 					// Place scheduledTime at root level, not inside post object
 					options.body.scheduledTime = scheduledTime;
 				}
+
+				// Add useNextFreeSlot if specified (ignored if scheduledTime is provided)
+				const useNextFreeSlot = this.getNodeParameter('useNextFreeSlot', i, false) as boolean;
+				options.body.useNextFreeSlot = useNextFreeSlot;
 
 				// thread handling for platforms that support threads
 				if (THREAD_SUPPORTED_PLATFORMS.includes(platform)) {
@@ -1681,6 +1771,22 @@ export class Blotato implements INodeType {
 						if (postOptions.instagramMediaType) {
 							options.body.post.target.mediaType = postOptions.instagramMediaType;
 						}
+						// Add audio name for Reels
+						if (postOptions.instagramAudioName) {
+							options.body.post.target.audioName = postOptions.instagramAudioName;
+						}
+						// Add collaborators
+						if (postOptions.instagramCollaborators) {
+							// Split comma-separated usernames and trim whitespace
+							const collaborators = postOptions.instagramCollaborators
+								.split(',')
+								.map((username) => username.trim())
+								.filter(Boolean)
+								.slice(0, 3); // Ensure max 3 collaborators
+							if (collaborators.length > 0) {
+								options.body.post.target.collaborators = collaborators;
+							}
+						}
 						break;
 					case 'pinterest':
 						// Required board ID
@@ -1738,6 +1844,13 @@ export class Blotato implements INodeType {
 							`Platform "${platform}" is not supported for resource "post".`,
 							{ itemIndex: i },
 						);
+				}
+				} else {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Operation "${operation}" is not supported for resource "post".`,
+						{ itemIndex: i },
+					);
 				}
 			} else {
 				throw new NodeOperationError(this.getNode(), `Resource "${resource}" is not supported.`, { itemIndex: i });
@@ -1811,6 +1924,29 @@ export class Blotato implements INodeType {
 						success: true,
 						message: `Video ID ${videoId} deleted successfully`
 					},
+					pairedItem: { item: i }
+				});
+			} else if (resource === 'post' && operation === 'get') {
+				const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+				const status = responseData?.status;
+
+				// Add helpful hints based on post status
+				if (status === 'in-progress') {
+					if (!responseData._hint) {
+						responseData._hint = '⏳ Your post is still being processed. Check again in a moment.';
+					}
+				} else if (status === 'failed' && responseData.errorMessage) {
+					if (!responseData._hint) {
+						responseData._hint = `❌ Post failed: ${responseData.errorMessage}`;
+					}
+				} else if (status === 'published' && responseData.publicUrl) {
+					if (!responseData._hint) {
+						responseData._hint = `✅ Post published successfully! View it at: ${responseData.publicUrl}`;
+					}
+				}
+
+				returnData.push({
+					json: responseData,
 					pairedItem: { item: i }
 				});
 			} else {
