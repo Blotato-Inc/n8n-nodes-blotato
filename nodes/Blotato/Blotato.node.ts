@@ -230,7 +230,6 @@ export class Blotato implements INodeType {
 					rows: 4,
 				},
 				default: '',
-				required: false,
 				placeholder: 'e.g. Regenerate this visual for a beginner audience',
 				displayOptions: {
 					show: {
@@ -1007,6 +1006,74 @@ export class Blotato implements INodeType {
 				},
 				options: [
 					{
+						displayName: 'Link Preview',
+						name: 'facebookLink',
+						type: 'string',
+						default: '',
+						validateType: 'url',
+						displayOptions: {
+							show: {
+								'/platform': ['facebook'],
+							},
+						},
+						description: 'URL to attach as a link preview to the Facebook post',
+					},
+					{
+						displayName: 'Media Type',
+						name: 'facebookMediaType',
+						type: 'options',
+						default: 'reel',
+						options: [
+							{
+								name: 'Video',
+								value: 'video',
+							},
+							{
+								name: 'Reel',
+								value: 'reel',
+							},
+						],
+						displayOptions: {
+							show: {
+								'/platform': ['facebook'],
+							},
+						},
+						description:
+							'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
+					},
+					{
+						displayName: 'Image Cover Index',
+						name: 'imageCoverIndex',
+						type: 'number',
+						default: 0,
+						typeOptions: {
+							minValue: 0,
+						},
+						displayOptions: {
+							show: {
+								'/platform': ['tiktok'],
+							},
+							hide: {
+								'/postCreateTiktokOptionIsDraft': [true],
+							},
+						},
+						description: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
+						hint: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
+					},
+					{
+						displayName: 'Alt Text',
+						name: 'instagramAltText',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description:
+							'Alternative text for accessibility. Only supported on single images or carousel images (max 2200 characters).',
+					},
+					{
 						displayName: 'Audio Name',
 						name: 'instagramAudioName',
 						type: 'string',
@@ -1037,23 +1104,41 @@ export class Blotato implements INodeType {
 						placeholder: 'username1, username2, username3',
 					},
 					{
-						displayName: 'Image Cover Index',
-						name: 'imageCoverIndex',
-						type: 'number',
-						default: 0,
-						typeOptions: {
-							minValue: 0,
-						},
+						displayName: 'Cover Image URL',
+						name: 'instagramCoverImageUrl',
+						type: 'string',
+						default: '',
+						validateType: 'url',
 						displayOptions: {
 							show: {
-								'/platform': ['tiktok'],
-							},
-							hide: {
-								'/postCreateTiktokOptionIsDraft': [true],
+								'/platform': ['instagram'],
 							},
 						},
-						description: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
-						hint: 'Only applies to Tiktok slideshows with multiple images. The index of the image to use as thumbnail cover (starts at 0).',
+						description:
+							'URL of cover image for Instagram Reels. Can be any publicly accessible URL. Max 8MB. Only applies to reels.',
+					},
+					{
+						displayName: 'Media Type',
+						name: 'instagramMediaType',
+						type: 'options',
+						default: 'reel',
+						options: [
+							{
+								name: 'Reel',
+								value: 'reel',
+							},
+							{
+								name: 'Story',
+								value: 'story',
+							},
+						],
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description:
+							'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
 					},
 					{
 						displayName: 'Linkedin Page',
@@ -1094,92 +1179,6 @@ export class Blotato implements INodeType {
 						description: 'Post to a Linkedin Company Page instead of your personal profile',
 					},
 					{
-						displayName: 'Media Type',
-						name: 'facebookMediaType',
-						type: 'options',
-						default: 'reel',
-						options: [
-							{
-								name: 'Video',
-								value: 'video',
-							},
-							{
-								name: 'Reel',
-								value: 'reel',
-							},
-						],
-						displayOptions: {
-							show: {
-								'/platform': ['facebook'],
-							},
-						},
-						description:
-							'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
-					},
-					{
-						displayName: 'Link Preview',
-						name: 'facebookLink',
-						type: 'string',
-						default: '',
-						validateType: 'url',
-						displayOptions: {
-							show: {
-								'/platform': ['facebook'],
-							},
-						},
-						description: 'URL to attach as a link preview to the Facebook post',
-					},
-					{
-						displayName: 'Media Type',
-						name: 'instagramMediaType',
-						type: 'options',
-						default: 'reel',
-						options: [
-							{
-								name: 'Reel',
-								value: 'reel',
-							},
-							{
-								name: 'Story',
-								value: 'story',
-							},
-						],
-						displayOptions: {
-							show: {
-								'/platform': ['instagram'],
-							},
-						},
-						description:
-							'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
-					},
-					{
-						displayName: 'Alt Text',
-						name: 'instagramAltText',
-						type: 'string',
-						default: '',
-						displayOptions: {
-							show: {
-								'/platform': ['instagram'],
-							},
-						},
-						description:
-							'Alternative text for accessibility. Only supported on single images or carousel images (max 2200 characters).',
-					},
-					{
-						displayName: 'Cover Image URL',
-						name: 'instagramCoverImageUrl',
-						type: 'string',
-						default: '',
-						validateType: 'url',
-						displayOptions: {
-							show: {
-								'/platform': ['instagram'],
-							},
-						},
-						description:
-							'URL of cover image for Instagram Reels. Can be any publicly accessible URL. Max 8MB. Only applies to reels.',
-					},
-					{
 						displayName: 'Pinterest Alt Text',
 						name: 'pinterestAltText',
 						type: 'string',
@@ -1203,6 +1202,14 @@ export class Blotato implements INodeType {
 							},
 						},
 						description: 'URL the pin should link to',
+					},
+					{
+						displayName: 'Scheduled Time',
+						name: 'scheduledTime',
+						type: 'dateTime',
+						default: '',
+						description:
+							'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
 					},
 					{
 						displayName: 'Reply Control',
@@ -1229,14 +1236,6 @@ export class Blotato implements INodeType {
 							},
 						},
 						description: 'Control who can reply to your Threads post',
-					},
-					{
-						displayName: 'Scheduled Time',
-						name: 'scheduledTime',
-						type: 'dateTime',
-						default: '',
-						description:
-							'Schedule the post for a future time. For example: "2024-12-31T23:59:59Z" for UTC time.',
 					},
 					{
 						displayName: 'Video Cover Timestamp',
