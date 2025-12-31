@@ -157,16 +157,16 @@ export class Blotato implements INodeType {
 				},
 				options: [
 					{
-						name: 'Create',
+						name: 'Create Visual',
 						value: 'create',
-						description: 'Create a video from a template',
-						action: 'Create video',
+						description: 'Create a visual (video, carousel, or infographic) from a template',
+						action: 'Create visual',
 					},
 					{
-						name: 'Get',
+						name: 'Get Visual',
 						value: 'get',
-						description: 'Get a video by ID',
-						action: 'Get video',
+						description: 'Get a visual by ID',
+						action: 'Get visual',
 					},
 					{
 						name: 'Delete',
@@ -219,6 +219,26 @@ export class Blotato implements INodeType {
 					},
 				},
 				description: 'The template to use to create the video',
+			},
+
+			// Prompt for template generation
+			{
+				displayName: 'Prompt',
+				name: 'prompt',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				default: '',
+				required: false,
+				placeholder: 'e.g. Regenerate this visual for a beginner audience',
+				displayOptions: {
+					show: {
+						resource: ['video'],
+						operation: ['create'],
+					},
+				},
+				description: 'New prompt to generate template with',
 			},
 
 			// Template inputs - using Resource Mapper for dynamic fields
@@ -1097,6 +1117,19 @@ export class Blotato implements INodeType {
 							'Type of Facebook video post - regular video or reel. Only applies for video posts. Ignored for text and image posts.',
 					},
 					{
+						displayName: 'Link Preview',
+						name: 'facebookLink',
+						type: 'string',
+						default: '',
+						validateType: 'url',
+						displayOptions: {
+							show: {
+								'/platform': ['facebook'],
+							},
+						},
+						description: 'URL to attach as a link preview to the Facebook post',
+					},
+					{
 						displayName: 'Media Type',
 						name: 'instagramMediaType',
 						type: 'options',
@@ -1118,6 +1151,33 @@ export class Blotato implements INodeType {
 						},
 						description:
 							'Type of Instagram video post - reel or story. Only applies for video posts. Ignored for image-only posts.',
+					},
+					{
+						displayName: 'Alt Text',
+						name: 'instagramAltText',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description:
+							'Alternative text for accessibility. Only supported on single images or carousel images (max 2200 characters).',
+					},
+					{
+						displayName: 'Cover Image URL',
+						name: 'instagramCoverImageUrl',
+						type: 'string',
+						default: '',
+						validateType: 'url',
+						displayOptions: {
+							show: {
+								'/platform': ['instagram'],
+							},
+						},
+						description:
+							'URL of cover image for Instagram Reels. Can be any publicly accessible URL. Max 8MB. Only applies to reels.',
 					},
 					{
 						displayName: 'Pinterest Alt Text',
@@ -1430,10 +1490,13 @@ export class Blotato implements INodeType {
 						}
 					}
 
+					const prompt = this.getNodeParameter('prompt', i, '') as string;
+
 					options.body = {
 						templateId,
 						inputs,
-						render: true, // Auto-render the video
+						prompt,
+						render: true, // Auto-render the visual
 					};
 				} else if (operation === 'get') {
 					const videoId = this.getNodeParameter('videoId', i) as string;
@@ -1579,9 +1642,12 @@ export class Blotato implements INodeType {
 					scheduledTime?: string;
 					linkedinPageId?: string | { value?: string };
 					facebookMediaType?: string;
+					facebookLink?: string;
 					instagramMediaType?: string;
 					instagramAudioName?: string;
 					instagramCollaborators?: string;
+					instagramAltText?: string;
+					instagramCoverImageUrl?: string;
 					pinterestAltText?: string;
 					pinterestLink?: string;
 					threadsReplyControl?: string;
@@ -1681,6 +1747,10 @@ export class Blotato implements INodeType {
 						if (postOptions.facebookMediaType) {
 							options.body.post.target.mediaType = postOptions.facebookMediaType;
 						}
+						// Add link preview if specified
+						if (postOptions.facebookLink) {
+							options.body.post.target.link = postOptions.facebookLink;
+						}
 						break;
 					case 'tiktok':
 						const isDraft = this.getNodeParameter(
@@ -1688,14 +1758,14 @@ export class Blotato implements INodeType {
 							i,
 							false,
 						) as boolean;
-						
+
 						// Get optional title for slideshows
 						const tiktokTitle = this.getNodeParameter(
 							'postCreateTiktokOptionTitle',
 							i,
 							'',
 						) as string;
-						
+
 						options.body.post.target = {
 							...options.body.post.target,
 							privacyLevel: this.getNodeParameter(
@@ -1787,6 +1857,14 @@ export class Blotato implements INodeType {
 								options.body.post.target.collaborators = collaborators;
 							}
 						}
+						// Add alt text for accessibility
+						if (postOptions.instagramAltText) {
+							options.body.post.target.altText = postOptions.instagramAltText;
+						}
+						// Add cover image URL for Reels
+						if (postOptions.instagramCoverImageUrl) {
+							options.body.post.target.coverImageUrl = postOptions.instagramCoverImageUrl;
+						}
 						break;
 					case 'pinterest':
 						// Required board ID
@@ -1860,7 +1938,7 @@ export class Blotato implements INodeType {
 			const credentials = await this.getCredentials('blotatoApi');
 			// prepend server to path
 			options.uri = credentials.server + options.uri!;
-			
+
 			let response;
 			try {
 				response = await this.helpers.requestWithAuthentication.call(
@@ -1872,11 +1950,11 @@ export class Blotato implements INodeType {
 				if (this.continueOnFail()) {
 					const errorMessage = error.message || 'An error occurred';
 					const errorDescription = error.description || error.response?.data?.message || error.response?.data?.error || '';
-					
+
 					const combinedMessage = errorDescription && errorDescription !== errorMessage
 						? `${errorMessage}: ${errorDescription}`
 						: errorMessage;
-					
+
 					returnData.push({
 						json: {
 							error: combinedMessage,
@@ -1889,7 +1967,7 @@ export class Blotato implements INodeType {
 					});
 					continue;
 				}
-				
+
 				throw new NodeApiError(this.getNode(), error as JsonObject, {
 					itemIndex: i,
 				});
