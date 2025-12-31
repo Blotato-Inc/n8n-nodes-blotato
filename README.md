@@ -23,12 +23,12 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 This node provides three main resources for interacting with Blotato:
 
 ### Video Resource
-Create AI-generated videos and carousels from templates.
-- **Create**: Generate videos and carousels from pre-built templates with dynamic inputs
-- **Get**: Retrieve video status and details by ID
-- **Delete**: Remove a video by ID
+Create AI-generated visuals from templates, such as videos, carousels, slideshows, infographics, and images.
+- **Create Visual**: Generate visuals from pre-built templates with a prompt and optional inputs
+- **Get Visual**: Retrieve visual status and details by ID
+- **Delete**: Remove a viusal by ID
 - **Features**:
-  - Template-based video and carousel generation
+  - Template-based generation of visual assets
   - Dynamic input fields based on template requirements
   - Support for leading AI image and video models
   - Automatic rendering upon creation
