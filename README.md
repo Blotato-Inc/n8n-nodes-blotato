@@ -20,7 +20,7 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-This node provides three main resources for interacting with Blotato:
+This node provides four main resources for interacting with Blotato:
 
 ### Video Resource
 Create AI-generated visuals from templates, such as videos, carousels, slideshows, infographics, and images.
@@ -61,6 +61,23 @@ Post content across multiple social media platforms using the Post resource.
   - **Note**: Instagram, Tiktok, Pinterest, and Youtube require at least one media file (image or video) to be included in posts.
   - Rate limit: 30 requests per minute
 
+### Source Extraction
+Extract content from various sources using the Source resource. This is useful for repurposing content from different platforms.
+- **Operations**:
+  - **Create**: Submit a source for content extraction (async processing)
+  - **Get**: Retrieve extracted content by source ID
+- **Source Types**:
+  - **URL** (default): Paste any URL and the type is auto-detected. Supported URL types:
+    - YouTube: Extracts video transcript
+    - TikTok: Extracts video content
+    - Article: Extracts web article text
+    - PDF: Extracts document text
+    - Audio: Transcribes audio files
+  - **Text**: Raw text content with optional AI transformation
+  - **AI Research**: AI-powered research query (powered by Perplexity)
+- **Optional Instructions**: AI instructions to transform extracted content (e.g., "Summarize in 5 bullet points for Instagram", "Translate to Spanish"). Leave blank for raw source content.
+- **Async processing**: Create returns a source ID; use Get to poll for extracted content
+
 ## Credentials
 
 To use this node, you need to create credentials in n8n:
@@ -98,6 +115,12 @@ To use this node, you need to create credentials in n8n:
 1. **Upload your media** using the Media resource and Upload operation
 2. **Publish to multiple platforms** using the Post resource and Create operation
 3. **Track publishing progress** using the Post Get operation with the submission ID
+
+### Example: Extract YouTube Transcript and Repurpose
+
+1. **Submit YouTube URL** using Source Create with the URL source type (auto-detects YouTube)
+2. **Poll for extraction** using Source Get with the returned source ID
+3. **Use extracted transcript** to generate new content with AI or repurpose for other platforms
 
 ### Tips
 

@@ -49,7 +49,101 @@ const API_ENDPOINTS = {
 	VIDEO_GET: '/v2/videos/creations',
 	VIDEO_DELETE: '/v2/videos',
 	POST_GET: '/v2/posts',
+	SOURCE: '/v2/source-resolutions-v3',
 };
+
+// Supported source types for Source API
+const SOURCE_TYPES = [
+	{ name: 'URL', value: 'url', description: 'YouTube, TikTok, Article, PDF, or Audio URL' },
+	{ name: 'Text', value: 'text', description: 'Raw text content with optional AI transformation' },
+	{ name: 'AI Research', value: 'perplexity-query', description: 'AI-powered research query' },
+];
+
+// Helper function to infer source type from URL
+function inferSourceTypeFromUrl(url: string): string {
+	const lowerUrl = url.toLowerCase();
+
+	// YouTube
+	if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+		return 'youtube';
+	}
+
+	// TikTok
+	if (lowerUrl.includes('tiktok.com')) {
+		return 'tiktok';
+	}
+
+	// PDF (check extension)
+	if (lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf?')) {
+		return 'pdf';
+	}
+
+	// Audio (check common extensions)
+	const audioExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac'];
+	for (const ext of audioExtensions) {
+		if (lowerUrl.endsWith(ext) || lowerUrl.includes(`${ext}?`)) {
+			return 'audio';
+		}
+	}
+
+	// Default to article for any other URL
+	return 'article';
+}
+
+// Helper function to clean transcript by removing VTT/SRT timestamps and markdown formatting
+function cleanTranscript(text: string): string {
+	if (!text || typeof text !== 'string') {
+		return text;
+	}
+
+	// Remove VTT timestamp lines (e.g., "00:00:00.020 --> 00:00:02.780")
+	let cleaned = text.replace(/\d{2}:\d{2}:\d{2}[.,]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[.,]\d{3}/g, '');
+
+	// Remove SRT timestamp lines (e.g., "00:00:00,020 --> 00:00:02,780")
+	cleaned = cleaned.replace(/\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/g, '');
+
+	// Remove standalone sequence numbers (lines with just a number, common in SRT)
+	cleaned = cleaned.replace(/^\d+\s*$/gm, '');
+
+	// Remove markdown formatting (keep code, links, images, and lists)
+	// Remove headers (# ## ### etc.)
+	cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+
+	// Remove bold (**text** or __text__)
+	cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+	cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+
+	// Remove italic (*text* or _text_) - be careful not to remove underscores in words
+	cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
+	cleaned = cleaned.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '$1');
+
+	// Remove strikethrough (~~text~~)
+	cleaned = cleaned.replace(/~~([^~]+)~~/g, '$1');
+
+	// Remove horizontal rules (---, ***, ___)
+	cleaned = cleaned.replace(/^[-*_]{3,}\s*$/gm, '');
+
+	// Remove blockquotes (> text)
+	cleaned = cleaned.replace(/^>\s*/gm, '');
+
+	// Normalize multiple newlines to single newline
+	cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+	// Remove leading/trailing whitespace from each line
+	cleaned = cleaned.split('\n').map(line => line.trim()).join('\n');
+
+	// Remove leading/trailing newlines from the entire text
+	cleaned = cleaned.trim();
+
+	// Join text that was split across lines into paragraphs
+	// Replace single newlines (not double) with spaces to create flowing text
+	cleaned = cleaned.replace(/(?<!\n)\n(?!\n)/g, ' ');
+
+	// Clean up any double spaces
+	cleaned = cleaned.replace(/\s{2,}/g, ' ');
+
+	return cleaned;
+}
 
 // Blotato URLs for hint messages
 const BLOTATO_URLS = {
@@ -112,6 +206,11 @@ export class Blotato implements INodeType {
 				type: 'info',
 				displayCondition: '={{$parameter["resource"] === "post"}}',
 			},
+			{
+				message: `API Dashboard for debugging: <a href="${BLOTATO_URLS.API_DASHBOARD}" target="_blank" style="color: #0088cc;">${BLOTATO_URLS.API_DASHBOARD}</a>`,
+				type: 'info',
+				displayCondition: '={{$parameter["resource"] === "source"}}',
+			},
 		],
 		properties: [
 			// ----------------------------------
@@ -124,16 +223,20 @@ export class Blotato implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Video',
-						value: 'video',
-					},
-					{
 						name: 'Media',
 						value: 'media',
 					},
 					{
 						name: 'Post',
 						value: 'post',
+					},
+					{
+						name: 'Source',
+						value: 'source',
+					},
+					{
+						name: 'Video',
+						value: 'video',
 					},
 				],
 				default: 'post',
@@ -142,6 +245,164 @@ export class Blotato implements INodeType {
 			// ----------------------------------
 			//         Operations
 			// ----------------------------------
+
+			// ------------- source --------------
+
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+					},
+				},
+				options: [
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Submit a source for content extraction (YouTube, TikTok, article, PDF, etc.)',
+						action: 'Create source',
+					},
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get the extracted content by source ID',
+						action: 'Get source',
+					},
+				],
+				default: 'create',
+			},
+
+			// Source Type selection
+			{
+				displayName: 'Source Type',
+				name: 'sourceType',
+				type: 'options',
+				options: SOURCE_TYPES,
+				default: 'url',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['create'],
+					},
+				},
+				description: 'The type of source to extract content from.',
+			},
+
+			// URL field for URL source type
+			{
+				displayName: 'URL',
+				name: 'sourceUrl',
+				type: 'string',
+				required: true,
+				validateType: 'url',
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['create'],
+						sourceType: ['url'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. https://www.youtube.com/watch?v=...',
+				description: 'YouTube, TikTok, Article, PDF, or Audio URL. The type will be auto-detected.',
+			},
+
+			// Text field for text source type
+			{
+				displayName: 'Text',
+				name: 'sourceText',
+				type: 'string',
+				typeOptions: {
+					rows: 6,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['create'],
+						sourceType: ['text'],
+					},
+				},
+				default: '',
+				placeholder: 'Enter your text content here...',
+				description: 'The raw text content to transform.',
+			},
+
+			// Query field for AI Research source type
+			{
+				displayName: 'Query',
+				name: 'sourceQuery',
+				type: 'string',
+				typeOptions: {
+					rows: 3,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['create'],
+						sourceType: ['perplexity-query'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. What are the latest trends in AI?',
+				description: 'The search query for AI Research.',
+			},
+
+			// Optional Instructions field for all source types
+			{
+				displayName: 'Optional Instructions',
+				name: 'customInstructions',
+				type: 'string',
+				typeOptions: {
+					rows: 3,
+				},
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['create'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. summarize in 5 detailed bullet points for an instagram carousel... leave this blank if you only want the raw source content.',
+				description: 'AI instructions to transform the extracted content (e.g., summarize, translate, reformat).',
+			},
+
+			// Source ID for Get operation
+			{
+				displayName: 'Source ID',
+				name: 'sourceId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['get'],
+					},
+				},
+				default: '',
+				placeholder: 'e.g. 123e4567-e89b-12d3-a456-426614174000',
+				description: 'The ID of the source resolution to retrieve',
+			},
+
+			// Clean Transcript option for Get operation
+			{
+				displayName: 'Clean Transcript',
+				name: 'cleanTranscript',
+				type: 'boolean',
+				default: true,
+				displayOptions: {
+					show: {
+						resource: ['source'],
+						operation: ['get'],
+					},
+				},
+				description: 'Whether to remove timestamps and clean up the transcript for YouTube/TikTok/Audio sources. Makes the text easier to use for content repurposing.',
+			},
 
 			// ------------- video --------------
 
@@ -1450,7 +1711,94 @@ export class Blotato implements INodeType {
 
 			const options: IRequestOptions = {};
 
-			if (resource === 'video') {
+			if (resource === 'source') {
+				options.json = true;
+
+				if (operation === 'create') {
+					options.method = 'POST';
+					options.uri = API_ENDPOINTS.SOURCE;
+
+					const sourceType = this.getNodeParameter('sourceType', i) as string;
+					const customInstructions = this.getNodeParameter('customInstructions', i, '') as string;
+
+					// Build the request body based on source type
+					if (sourceType === 'text') {
+						const sourceText = this.getNodeParameter('sourceText', i) as string;
+						if (!sourceText) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Text content is required for text source type',
+								{ itemIndex: i },
+							);
+						}
+						options.body = {
+							source: {
+								sourceType,
+								text: sourceText,
+							},
+						};
+					} else if (sourceType === 'perplexity-query') {
+						const sourceQuery = this.getNodeParameter('sourceQuery', i) as string;
+						if (!sourceQuery) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Query is required for AI Research source type',
+								{ itemIndex: i },
+							);
+						}
+						options.body = {
+							source: {
+								sourceType,
+								text: sourceQuery,
+							},
+						};
+					} else {
+						// URL source type - auto-detect the actual type from URL
+						const sourceUrl = this.getNodeParameter('sourceUrl', i) as string;
+						if (!sourceUrl) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'URL is required',
+								{ itemIndex: i },
+							);
+						}
+
+						// Infer the actual source type from the URL
+						const inferredType = inferSourceTypeFromUrl(sourceUrl);
+
+						options.body = {
+							source: {
+								sourceType: inferredType,
+								url: sourceUrl,
+							},
+						};
+					}
+
+					// Add customInstructions if provided (top-level field)
+					if (customInstructions) {
+						options.body.customInstructions = customInstructions;
+					}
+				} else if (operation === 'get') {
+					const sourceId = this.getNodeParameter('sourceId', i) as string;
+
+					if (!sourceId) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Source ID is required',
+							{ itemIndex: i },
+						);
+					}
+
+					options.method = 'GET';
+					options.uri = `${API_ENDPOINTS.SOURCE}/${sourceId}`;
+				} else {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Operation "${operation}" is not supported for resource "source".`,
+						{ itemIndex: i },
+					);
+				}
+			} else if (resource === 'video') {
 				options.json = true;
 
 				if (operation === 'create') {
@@ -2001,6 +2349,47 @@ export class Blotato implements INodeType {
 						success: true,
 						message: `Video ID ${videoId} deleted successfully`
 					},
+					pairedItem: { item: i }
+				});
+			} else if (resource === 'source' && operation === 'get') {
+				const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+				const status = responseData?.status;
+
+				// Clean transcript if option is enabled and content exists
+				const shouldCleanTranscript = this.getNodeParameter('cleanTranscript', i, true) as boolean;
+				if (shouldCleanTranscript && responseData?.content) {
+					responseData.content = cleanTranscript(responseData.content);
+				}
+
+				// Add helpful hints based on source resolution status
+				if (status === 'pending' || status === 'processing') {
+					if (!responseData._hint) {
+						responseData._hint = '⏳ Source is still being processed. Try again in a moment.';
+					}
+				} else if (status === 'failed' && responseData.error) {
+					if (!responseData._hint) {
+						responseData._hint = `❌ Source extraction failed: ${responseData.error}`;
+					}
+				} else if (status === 'completed' || status === 'success') {
+					if (!responseData._hint) {
+						responseData._hint = '✅ Source content extracted successfully!';
+					}
+				}
+
+				returnData.push({
+					json: responseData,
+					pairedItem: { item: i }
+				});
+			} else if (resource === 'source' && operation === 'create') {
+				const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+
+				// Add hint about polling for results
+				if (responseData.id && !responseData._hint) {
+					responseData._hint = `📋 Source submitted for processing. Use "Get Source" with ID: ${responseData.id} to retrieve the extracted content.`;
+				}
+
+				returnData.push({
+					json: responseData,
 					pairedItem: { item: i }
 				});
 			} else if (resource === 'post' && operation === 'get') {
