@@ -4,7 +4,7 @@ import type {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	IRequestOptions,
+	IHttpRequestOptions,
 	ResourceMapperFields,
 	ResourceMapperField,
 	FieldType,
@@ -1543,9 +1543,9 @@ export class Blotato implements INodeType {
 				try {
 					// Call API to get template details including inputs
 					const credentials = await this.getCredentials('blotatoApi');
-					const options: IRequestOptions = {
+					const options: IHttpRequestOptions = {
 						method: 'GET',
-						uri: `${credentials.server}${API_ENDPOINTS.VIDEO_TEMPLATES}`,
+						url: `${credentials.server}${API_ENDPOINTS.VIDEO_TEMPLATES}`,
 						qs: {
 							id: templateId,
 							fields: 'id,name,description,inputs'
@@ -1555,7 +1555,7 @@ export class Blotato implements INodeType {
 
 					let responseData;
 					try {
-						responseData = await this.helpers.requestWithAuthentication.call(
+						responseData = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'blotatoApi',
 							options,
@@ -1567,7 +1567,7 @@ export class Blotato implements INodeType {
 						};
 					}
 
-					// Parse the response
+					// Parse the response (httpRequestWithAuthentication returns parsed JSON)
 					const templatesData = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
 
 					// The API returns an array of templates when filtered by ID
@@ -1709,14 +1709,16 @@ export class Blotato implements INodeType {
 			const resource = this.getNodeParameter('resource', i);
 			const operation = this.getNodeParameter('operation', i);
 
-			const options: IRequestOptions = {};
+			const options: IHttpRequestOptions = {
+				url: '', // Will be set based on resource/operation
+			};
 
 			if (resource === 'source') {
 				options.json = true;
 
 				if (operation === 'create') {
 					options.method = 'POST';
-					options.uri = API_ENDPOINTS.SOURCE;
+					options.url = API_ENDPOINTS.SOURCE;
 
 					const sourceType = this.getNodeParameter('sourceType', i) as string;
 					const customInstructions = this.getNodeParameter('customInstructions', i, '') as string;
@@ -1790,7 +1792,7 @@ export class Blotato implements INodeType {
 					}
 
 					options.method = 'GET';
-					options.uri = `${API_ENDPOINTS.SOURCE}/${sourceId}`;
+					options.url = `${API_ENDPOINTS.SOURCE}/${sourceId}`;
 				} else {
 					throw new NodeOperationError(
 						this.getNode(),
@@ -1803,7 +1805,7 @@ export class Blotato implements INodeType {
 
 				if (operation === 'create') {
 					options.method = 'POST';
-					options.uri = API_ENDPOINTS.VIDEO_FROM_TEMPLATES;
+					options.url = API_ENDPOINTS.VIDEO_FROM_TEMPLATES;
 					const templateIdParam = this.getNodeParameter('templateId', i) as { value: string } | string;
 					const templateId = extractTemplateId(templateIdParam);
 
@@ -1857,7 +1859,7 @@ export class Blotato implements INodeType {
 					}
 
 					options.method = 'GET';
-					options.uri = `${API_ENDPOINTS.VIDEO_GET}/${videoId}`;
+					options.url = `${API_ENDPOINTS.VIDEO_GET}/${videoId}`;
 				} else if (operation === 'delete') {
 					const videoId = this.getNodeParameter('videoId', i) as string;
 
@@ -1870,7 +1872,7 @@ export class Blotato implements INodeType {
 					}
 
 					options.method = 'DELETE';
-					options.uri = `${API_ENDPOINTS.VIDEO_DELETE}/${videoId}`;
+					options.url = `${API_ENDPOINTS.VIDEO_DELETE}/${videoId}`;
 				} else {
 					throw new NodeOperationError(
 						this.getNode(),
@@ -1881,7 +1883,7 @@ export class Blotato implements INodeType {
 			} else if (resource === 'media') {
 				options.json = true;
 				options.method = 'POST';
-				options.uri = '/v2/media';
+				options.url = '/v2/media';
 
 				if (operation === 'upload') {
 					const useBinaryData = this.getNodeParameter('useBinaryData', i) as boolean;
@@ -1934,10 +1936,10 @@ export class Blotato implements INodeType {
 					}
 
 					options.method = 'GET';
-					options.uri = `${API_ENDPOINTS.POST_GET}/${postSubmissionId}`;
+					options.url = `${API_ENDPOINTS.POST_GET}/${postSubmissionId}`;
 				} else if (operation === 'create') {
 				options.method = 'POST';
-				options.uri = '/v2/posts';
+				options.url = '/v2/posts';
 
 				const platform = this.getNodeParameter('platform', i) as string;
 				const accountId = (this.getNodeParameter('accountId', i) as { value: string }).value;
@@ -2284,11 +2286,11 @@ export class Blotato implements INodeType {
 
 			const credentials = await this.getCredentials('blotatoApi');
 			// prepend server to path
-			options.uri = credentials.server + options.uri!;
+			options.url = credentials.server + options.url!;
 
 			let response;
 			try {
-				response = await this.helpers.requestWithAuthentication.call(
+				response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					'blotatoApi',
 					options,

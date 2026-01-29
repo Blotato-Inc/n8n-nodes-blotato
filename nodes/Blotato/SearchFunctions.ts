@@ -2,7 +2,7 @@ import type {
 	ILoadOptionsFunctions,
 	INodeListSearchItems,
 	INodeListSearchResult,
-	IRequestOptions,
+	IHttpRequestOptions,
 } from 'n8n-workflow';
 
 type AccountSearchItem = {
@@ -22,17 +22,17 @@ type TemplateSearchItem = {
 
 export async function getAccounts(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
 	const platform = this.getNodeParameter('platform', 0) as string;
-	const options: IRequestOptions = {};
-
-	options.qs = { platform };
-	options.method = `GET`;
-
 	const credentials = await this.getCredentials('blotatoApi');
-	options.uri = credentials.server + '/v2/users/me/accounts';
-	
+
+	const options: IHttpRequestOptions = {
+		method: 'GET',
+		url: `${credentials.server}/v2/users/me/accounts`,
+		qs: { platform },
+	};
+
 	let responseData;
 	try {
-		responseData = await this.helpers.requestWithAuthentication.call(
+		responseData = await this.helpers.httpRequestWithAuthentication.call(
 			this,
 			'blotatoApi',
 			options,
@@ -41,7 +41,7 @@ export async function getAccounts(this: ILoadOptionsFunctions): Promise<INodeLis
 		return { results: [] };
 	}
 
-	const results: INodeListSearchItems[] = JSON.parse(responseData).items.map(
+	const results: INodeListSearchItems[] = responseData.items.map(
 		(item: AccountSearchItem) => ({
 			name: item.fullname || item.username,
 			value: item.id,
@@ -79,17 +79,17 @@ export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INode
 			};
 		}
 
-		const options: IRequestOptions = {};
-
-		options.qs = { platform };
-		options.method = `GET`;
-
 		const credentials = await this.getCredentials('blotatoApi');
-		options.uri = credentials.server + `/v2/users/me/accounts/${accountId}/subaccounts`;
-		
+
+		const options: IHttpRequestOptions = {
+			method: 'GET',
+			url: `${credentials.server}/v2/users/me/accounts/${accountId}/subaccounts`,
+			qs: { platform },
+		};
+
 		let responseData;
 		try {
-			responseData = await this.helpers.requestWithAuthentication.call(
+			responseData = await this.helpers.httpRequestWithAuthentication.call(
 				this,
 				'blotatoApi',
 				options,
@@ -100,7 +100,7 @@ export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INode
 			return { results: [] };
 		}
 
-		const results: INodeListSearchItems[] = JSON.parse(responseData).items.map(
+		const results: INodeListSearchItems[] = responseData.items.map(
 			(item: SubaccountSearchItem) => ({
 				name: item.name,
 				value: item.id,
@@ -125,16 +125,16 @@ export async function getSubaccounts(this: ILoadOptionsFunctions): Promise<INode
 }
 
 export async function getTemplates(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
-	const options: IRequestOptions = {};
-
-	options.method = `GET`;
-
 	const credentials = await this.getCredentials('blotatoApi');
-	options.uri = credentials.server + '/v2/videos/templates';
-	
+
+	const options: IHttpRequestOptions = {
+		method: 'GET',
+		url: `${credentials.server}/v2/videos/templates`,
+	};
+
 	let responseData;
 	try {
-		responseData = await this.helpers.requestWithAuthentication.call(
+		responseData = await this.helpers.httpRequestWithAuthentication.call(
 			this,
 			'blotatoApi',
 			options,
@@ -143,7 +143,7 @@ export async function getTemplates(this: ILoadOptionsFunctions): Promise<INodeLi
 		return { results: [] };
 	}
 
-	const templates = JSON.parse(responseData).items || JSON.parse(responseData);
+	const templates = responseData.items || responseData;
 
 	const results: INodeListSearchItems[] = templates.map(
 		(item: TemplateSearchItem) => ({
