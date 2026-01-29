@@ -289,7 +289,7 @@ export class Blotato implements INodeType {
 						operation: ['create'],
 					},
 				},
-				description: 'The type of source to extract content from.',
+				description: 'The type of source to extract content from',
 			},
 
 			// URL field for URL source type
@@ -329,7 +329,7 @@ export class Blotato implements INodeType {
 				},
 				default: '',
 				placeholder: 'Enter your text content here...',
-				description: 'The raw text content to transform.',
+				description: 'The raw text content to transform',
 			},
 
 			// Query field for AI Research source type
@@ -350,7 +350,7 @@ export class Blotato implements INodeType {
 				},
 				default: '',
 				placeholder: 'e.g. What are the latest trends in AI?',
-				description: 'The search query for AI Research.',
+				description: 'The search query for AI Research',
 			},
 
 			// Optional Instructions field for all source types
@@ -369,7 +369,7 @@ export class Blotato implements INodeType {
 				},
 				default: '',
 				placeholder: 'e.g. summarize in 5 detailed bullet points for an instagram carousel... leave this blank if you only want the raw source content.',
-				description: 'AI instructions to transform the extracted content (e.g., summarize, translate, reformat).',
+				description: 'AI instructions to transform the extracted content (e.g., summarize, translate, reformat)',
 			},
 
 			// Source ID for Get operation
